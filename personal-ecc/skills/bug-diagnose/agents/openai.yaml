@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Diagnose"
+  short_description: "Trace bug causes with hypotheses and verifiable evidence"
+  default_prompt: "Use $bug-diagnose to investigate this bug, trace its causal path, assess the evidence, and report a confirmed, suspected, or unresolved cause. Stop before fix planning or code changes."

@@ -1,4 +1,4 @@
 {
   "version": 1,
-  "skills": ["ecc-plan", "ecc-project-rules"]
+  "skills": ["ecc-plan", "ecc-project-rules", "bug-intake", "bug-diagnose", "bug-plan", "bug-fix", "bug-review"]
 }

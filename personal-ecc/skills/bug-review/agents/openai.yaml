@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Review"
+  short_description: "Review fixes, related-feature risks, and user test evidence"
+  default_prompt: "Use $bug-review to review the current bug-fix diff against its plan, affected-feature contracts, and my test results. Report findings without editing files or running checks."

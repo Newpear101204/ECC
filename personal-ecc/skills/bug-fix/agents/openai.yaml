@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Fix"
+  short_description: "Apply scoped fixes and iterate on user-run test feedback"
+  default_prompt: "Use $bug-fix to implement this scoped correction, preserve related-feature behavior, and give me the steps to test it myself. Stop for my feedback before review."

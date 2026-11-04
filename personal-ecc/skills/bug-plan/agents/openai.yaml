@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Plan"
+  short_description: "Plan bug fixes with impact analysis and regression checks"
+  default_prompt: "Use $bug-plan to plan this diagnosed bug fix, trace its impact on existing and related features, and define compatibility and regression checks. Stop before implementation."

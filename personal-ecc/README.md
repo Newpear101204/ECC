@@ -35,6 +35,10 @@ global `AGENTS.override.md` blocks setup until its precedence is resolved.
 
 ## Customize
 
+Follow the [personal skill authoring policy](instructions.md#authoring-personal-ecc-skills)
+when adding workflows. It keeps canonical sources and registration inside this
+overlay instead of modifying upstream catalogs or package/install configuration.
+
 | Source | Purpose | Setup required after editing? |
 |---|---|---|
 | `personal-ecc/instructions.md` | Personal behavior and automatic workflow routing | No; open a new session |
@@ -43,9 +47,30 @@ global `AGENTS.override.md` blocks setup until its precedence is resolved.
 | `personal-ecc/rules/` (optional) | Personal rule overrides using the upstream directory layout | No; open a new session |
 | Upstream `rules/` | Shared base rules updated from upstream | No; open a new session |
 
-The profile initially selects `ecc-plan` and `ecc-project-rules`. Skill names
+The profile selects `ecc-plan`, `ecc-project-rules`, `bug-intake`,
+`bug-diagnose`, `bug-plan`, `bug-fix`, and `bug-review`. Skill names
 resolve under `personal-ecc/skills/`. Removing a name from the profile does not
 delete an existing installed link; retire that link explicitly if needed.
+
+Use `$bug-intake` with a tester report to normalize the available evidence,
+identify blocking gaps, and propose impact/severity for review. It stops at
+intake. Use `$bug-diagnose` next, with the intake or a sufficiently detailed report,
+to trace the failure, test hypotheses within scope, and report the causal evidence.
+Reproduction is an optional technique inside diagnosis, not a separate stage.
+Diagnosis stops before fix planning or implementation. Use `$bug-plan` with a
+diagnosis to choose the correction boundary, inspect effects on existing and
+related features, and define regression checks. Planning stops before code changes.
+Each stage is independently invoked; no stage advances automatically. Run setup
+again on each machine after pulling a profile that adds a skill.
+
+After authorizing the plan, use `$bug-fix` to implement it. The AI gives you the
+changes, expected results, and manual steps/commands to run. You run the application
+and checks yourself by default; report errors to continue the same scoped fix.
+The AI may author regression tests but does not run tests/builds unless you ask.
+When you confirm the latest patch and request `$bug-review`, it inspects the diff,
+related-feature contracts, and your results without editing or executing checks
+by default. Review findings return to fixing only when requested; subsequent code
+changes need user testing again. There is no `bug-verify` skill or stage.
 
 Commit and push personal changes to this fork. On other machines, pull the
 `personal` branch and open a new Codex session to read current instructions,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Intake"
+  short_description: "Triage tester reports before diagnosing or fixing bugs"
+  default_prompt: "Use $bug-intake to normalize this tester report, identify blocking information gaps, and assess impact and severity. Stop after the intake record."
