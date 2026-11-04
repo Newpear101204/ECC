@@ -1,0 +1,4 @@
+interface:
+  display_name: "ECC Project Rules"
+  short_description: "Detect the stack and apply shared ECC coding rules"
+  default_prompt: "Use $ecc-project-rules to detect this project's stack and load its applicable shared ECC rules."

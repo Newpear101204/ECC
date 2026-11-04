@@ -1,0 +1,4 @@
+interface:
+  display_name: "ECC Plan"
+  short_description: "Code-grounded implementation plans from requirements or PRDs"
+  default_prompt: "Use $ecc-plan to plan the following request, covering implementation tasks, risks, and validation."
