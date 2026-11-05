@@ -63,6 +63,13 @@ related features, and define regression checks. Planning stops before code chang
 Each stage is independently invoked; no stage advances automatically. Run setup
 again on each machine after pulling a profile that adds a skill.
 
+For a defect in a shared function, `$bug-plan` lists the known call sites and
+feature-level effects, compares a direct shared correction with any viable local
+compatibility option, and records your choice. Preserving other features means
+preserving intended valid behavior. It does not require freezing the same defect
+in every caller. `$bug-fix` follows your selected boundary; it does not silently
+replace an approved shared correction with a feature-specific flag or wrapper.
+
 After authorizing the plan, use `$bug-fix` to implement it. The AI gives you the
 changes, expected results, and manual steps/commands to run. You run the application
 and checks yourself by default; report errors to continue the same scoped fix.

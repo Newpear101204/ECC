@@ -48,12 +48,30 @@ callers, known unknowns, and regression checks rather than starting the workflow
 again. If a material requirement, cause, or compatibility decision is unresolved,
 name that blocker and continue only independent work that remains justified.
 
+For a defective shared function, carry forward the user's shared-versus-local
+choice and the listed consumers. If that choice is missing, identify the function,
+report the consumer locations and expected effects, and present the direct shared
+correction and any viable local alternative before editing that boundary. Do not
+default to a feature flag or wrapper because other features use the function.
+Existing explicit authorization of the disclosed boundary is sufficient; do not
+ask again merely because the function is shared. A generic request to fix one
+feature does not by itself settle an undisclosed shared-versus-local choice.
+
 ## 2. Implement the Coherent Correction
 
 Make the smallest coherent change that addresses the cause. Follow the approved
 local/shared correction boundary and existing repository patterns. Preserve
 valid behavior, error handling, authorization, API/type/null semantics, ordering,
 pagination, and other caller-specific contracts identified in the plan.
+
+If the user approved a direct shared correction, fix the defective function
+itself and the authorized dependent code as needed. Do not substitute a local
+flag, duplicate, or bypass to keep other callers' defective outputs unchanged.
+Preserve intended valid behavior; the disclosed correction of the same defect in
+other callers is part of the approved result. If the user chose local isolation,
+implement that viable boundary and disclose which shared defects remain. Do not
+silently broaden it to the shared function. Use flags/adapters only when justified
+by legitimate differing requirements or the selected compatibility option.
 
 Do not suppress the symptom with broad catches, discard records, weaken tests,
 disable checks, or change global defaults without a justified requirement. Keep
@@ -71,6 +89,9 @@ debug output or sensitive data. This author inspection is part of preparing the
 patch, not the separate `bug-review` stage or proof that runtime behavior works.
 If new evidence requires broader scope, state the affected behavior and the
 decision needed; do not silently expand a local correction into a shared redesign.
+If newly discovered consumers or contracts materially change the approved impact,
+update the impact report and resolve that new decision before dependent edits.
+Do not manufacture a workaround to conceal the changed scope.
 
 ## 3. Hand Execution to the User
 
@@ -78,6 +99,8 @@ Return a concise handoff containing:
 
 - Bug reference and current attempt, with the changed files or available revision/diff scope.
 - What changed and why it addresses the diagnosed cause.
+- The selected shared/local boundary and related consumers whose behavior is
+  intentionally corrected, preserved, still defective, or unverified.
 - Existing and related-feature behavior preserved by the design, plus residual risks.
 - Tests added/updated, with their execution status explicitly marked.
 - Exact manual steps or repository-verified commands the user can run, required

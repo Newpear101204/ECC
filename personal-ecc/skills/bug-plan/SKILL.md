@@ -84,6 +84,15 @@ Include file/line references, contract or requirement references, and unresolved
 visibility limits. If repository access is unavailable, provide a conditional
 plan and name the missing impact checks instead of fabricating paths or callers.
 
+For a defective shared function, name its definition and each identified direct
+call site, then map wrappers/indirect paths to the affected features. Group repeated
+calls only if their locations remain visible. For each consumer, explain the
+relevant inputs, current versus corrected result, and whether behavior would
+change, remain unchanged, or is unknown. Separate callers that share the defect
+from callers with legitimate different requirements; do not label all callers
+broken merely because they use the function. Bound completeness by the inspected
+scope and disclose dynamic/external consumers that cannot be verified.
+
 ## 3. Choose the Correction Boundary
 
 Choose the smallest coherent correction that fixes the cause while preserving
@@ -96,6 +105,41 @@ leave the same defect in other affected consumers. Do not change a shared helper
 globally merely because the original feature needs a different representation.
 Different callers can legitimately require different null, error, or format
 semantics. Preserve those distinctions or identify an explicit contract decision.
+
+### Shared Defect: Report the Choice Before Implementation
+
+Preserving other features means preserving their intended valid behavior, not
+freezing every existing output or forbidding shared-code changes. Correcting the
+same confirmed defect in another caller is an intended effect to disclose, not
+automatically a regression. Do not invent a feature-specific flag, duplicate the
+function, or add a wrapper merely to avoid discussing a shared correction.
+
+When the cause is in shared code, present these meaningful options:
+
+- **Direct shared correction:** fix the defective function itself. Recommend this
+  when the shared implementation violates its intended contract for the affected
+  inputs. Show which consumers
+  change, which valid behavior remains, and the regression checks for each material
+  risk. Legitimately different caller requirements may need an explicit adapter
+  or contract decision; do not flatten them into one global behavior.
+- **Local compatibility option:** if technically sound, isolate the correction to
+  the reported feature. Explain its mechanism, maintenance cost, and which callers
+  retain the defect or legacy behavior. A flag is one possible mechanism, not a
+  required solution. Say when no local option can safely meet the requirement.
+
+Recommend an option with evidence, but leave the shared-versus-local decision to
+the user unless the conversation already authorizes that specific boundary. Ask
+whether to correct the shared function for the listed consumers or retain its
+behavior and use the viable local option. Silence is not selection of the local
+option. Declining the shared correction does not authorize an arbitrary workaround.
+If the user chooses a viable local correction, record the residual shared defect;
+if neither option is accepted or safe, mark the boundary unresolved.
+
+Record the chosen boundary, approval evidence, covered consumers, intended behavior
+changes, and remaining exclusions in the plan handed to `bug-fix`. Approval to
+implement a plan that clearly selects and discloses the shared correction covers
+that boundary; do not request the same approval again. Approval of a local plan
+does not authorize silently switching to a shared correction, or vice versa.
 
 Avoid hiding failures with broad exception handling, weakening validation or
 authorization, dropping records, or substituting arbitrary defaults unless the
@@ -150,7 +194,8 @@ needed beyond the normal code workflow, say so briefly rather than inventing one
 Use a compact structure proportional to the fix:
 
 1. Bug reference, diagnosis/confidence, objective, acceptance criteria, and scope.
-2. Correction point and rationale; meaningful alternatives and compatibility decisions.
+2. Correction point and rationale; for shared defects, direct/local options,
+   recommendation, and the user's selected boundary or explicit pending decision.
 3. Impact table for the original feature and other consumers, with evidence and limits.
 4. Ordered tasks, files, dependencies, and completion checks.
 5. Regression validation mapped to expected behavior and identified risks.

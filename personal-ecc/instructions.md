@@ -90,6 +90,10 @@ When asked to plan a diagnosed bug fix, read
 `personal-ecc/skills/bug-plan/SKILL.md`. Trace effects on the affected feature,
 shared components, and other consumers using source and contract evidence.
 Include behavior-preservation criteria and risk-linked regression checks.
+For defective shared code, list consumer locations and expected effects, recommend
+the direct correction when supported by the shared contract, and present any viable
+local compatibility option. Let the user select the boundary unless already
+authorized; do not default to feature flags merely to freeze defective behavior.
 Return the plan for review and stop before implementation. Preserve uncertainty
 when the diagnosis or compatibility decisions remain unresolved. Do not add a
 redundant approval gate to separately authorized broader work.
@@ -98,7 +102,11 @@ redundant approval gate to separately authorized broader work.
 
 When asked to implement a scoped bug fix or correct a failed attempt, read
 `personal-ecc/skills/bug-fix/SKILL.md`. The user runs the application and checks
-by default. Do not automatically execute tests/builds or start formal review;
+by default. Honor the selected shared/local correction boundary; an approved
+shared correction should fix the shared function rather than silently introduce
+a feature-only workaround. Resolve a missing boundary decision before dependent
+edits, and do not ask again for a boundary already explicitly authorized. Do not
+automatically execute tests/builds or start formal review;
 provide the changed scope, expected results, and steps for the user to run.
 Write appropriate regression tests as planned, marking them unexecuted until
 results are available. Respect explicitly delegated execution without inventing
