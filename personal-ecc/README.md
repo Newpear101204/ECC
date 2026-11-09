@@ -85,6 +85,39 @@ rules, and linked skills. Rerun setup when adding skills, moving the checkout,
 or updating the setup/bootstrap mechanism; use `--replace-existing` to rebind
 old links. Setup does not fetch changes automatically.
 
+## Database Evidence in Bug Workflows
+
+For the application confirmed to use your configured live/beta connection pair,
+say "bug live" / "bug production" to select `mysql_live`, or "bug beta" to select
+`mysql_beta`. Other projects need their own application-to-MCP mapping; the labels
+live/beta alone do not authorize querying these connections for any project.
+The environment carries across stages and feedback for that bug;
+a new bug or a changed environment needs its own target. Missing/conflicting
+targets are clarified before querying. An unavailable connection is reported,
+never replaced with the other environment. MCP configuration is machine-local;
+a configured server is usable only when its tools are available in the session.
+
+Live is strictly read-only through every access path. Beta is also read-only by
+default: record creation, updates, or deletion require your proactive explicit
+request identifying the operation and target. "Fix this beta bug" or approving a
+plan is not a data-mutation request. Schema/admin changes are not included. Tool
+and DB permissions still apply; the AI does not bypass a read-only tool by using
+credentials, scripts, or APIs. These instructions do not change database grants.
+
+Intake records the environment and identifiers without querying. Diagnosis,
+planning, fixing, and review can perform bounded read-only MCP inspection when
+stored values matter, independently of application/test execution permission.
+The AI traces payload transformations, model/query scopes, and the relevant rows,
+then explains the code-and-data causal chain with source locations and limitations.
+DB-independent bugs do not require database access. Reading rows and following
+branches is not running the API or verifying a patch; you still run checks by
+default. No data is created merely to make a branch executable.
+
+See the [shared database evidence guide](skills/bug-diagnose/references/database-evidence.md)
+for the procedure and [behavioral scenarios](tests/bug-data-evidence.scenarios.md)
+for isolated evaluation cases. The scenarios are an evaluation specification,
+not a claim that live behavior or production permissions have been tested.
+
 ## Update from Upstream
 
 With a clean working tree on `personal`:

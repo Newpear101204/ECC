@@ -19,6 +19,13 @@ commands, tests, or deployments. Read supplied artifacts and relevant requiremen
 or existing tickets when available and authorized. Do not explore implementation
 code to speculate about a cause.
 
+Record live/production versus beta, the relevant record/request identifiers,
+tenant or account scope, and occurrence time from the report and conversation.
+Preserve the environment for later stages of this same bug; do not inherit it from
+an unrelated bug. If missing or conflicting, record the gap and clarify when it
+blocks diagnosis. Do not query MCP databases during intake or infer data defects
+from identifiers alone. Hand off the specific data questions for diagnosis.
+
 Return the intake record in the conversation by default. Reuse an existing bug ID;
 if none exists, leave it unassigned instead of inventing a ticket number. Do not
 create project files or update, merge, close, prioritize, or assign remote tickets
@@ -43,7 +50,7 @@ Extract the following where relevant:
 | Summary | Affected capability and observable symptom, without a guessed cause |
 | Expected behavior | Expected outcome and its source: requirement, design, agreed rule, or tester expectation |
 | Actual behavior | Reported outcome, visible error, or incorrect result |
-| Context | Environment/build, user role, relevant device/browser, and necessary data conditions |
+| Context | Live/production or beta environment/build, user role, relevant device/browser, tenant/account scope, and necessary data conditions |
 | Reported steps | Preconditions, actions, and the step where the symptom appears |
 | Frequency | Attempts and occurrences if known; preserve approximate wording otherwise |
 | Evidence | Source references, timestamps, record/request IDs, or relevant excerpts |

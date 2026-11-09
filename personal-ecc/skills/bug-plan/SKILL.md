@@ -20,6 +20,12 @@ Do not edit implementation code, add tests, run application/test commands,
 install packages, alter data, commit, deploy, or mutate tickets. Planned actions
 and validation results must never be presented as already executed.
 
+Bounded read-only MCP queries may clarify existing-data conditions or impact;
+they are inspection, not application/test execution. Before using database
+evidence, read [Database Evidence](../bug-diagnose/references/database-evidence.md).
+Keep the diagnosis's live/beta target and permission boundaries; never query the
+other environment as a fallback. Planning does not authorize data changes.
+
 Return the plan in the conversation by default. Reuse the existing bug reference
 and requested document location; do not invent a ticket ID or create project
 documents without a user-selected location. Do not require another planning
@@ -36,6 +42,13 @@ Reuse intake and diagnosis context. Restate the defect, expected behavior and it
 basis, trigger, causal evidence, affected build/source, and confidence. Verify
 that relevant source locations still match the diagnosis; changed code may make
 the proposed correction obsolete.
+
+Carry forward the data queries/results with environment, observation time,
+record/tenant scope, derived inputs, and unresolved boundaries. Check their
+relevance and freshness rather than querying automatically or treating old beta
+results as proof about live. Read additional targeted data when an unknown value
+materially changes the correction boundary, affected records, or compatibility.
+If that evidence cannot be obtained, keep the dependent part of the plan conditional.
 
 Define observable acceptance criteria for the corrected case and the existing
 valid behavior that must remain. Preserve user scope boundaries. Do not silently
@@ -163,6 +176,12 @@ execution, and never imply observed RED/GREEN when those runs have not happened.
 If a data correction, schema change, shared contract change, or deployment step
 is genuinely required, plan compatibility, sequencing, and recovery explicitly.
 Do not execute those operations or assume permission from their inclusion in a plan.
+
+Separate code correction, existing-data correction, and schema migration. Live
+data mutations are outside the permitted AI actions; identify that boundary for
+any required operator-owned remediation. A proposed beta record change is also
+not an execution request. State its target, preconditions, intended values/effect,
+and recovery needs so the user can request it explicitly if desired.
 
 ## 5. Plan Regression Verification
 

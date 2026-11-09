@@ -30,6 +30,14 @@ claim observed RED/GREEN or passing coverage when it has not been run. This
 user-controlled execution preference overrides generic automatic test-running
 and stage-transition defaults for this personal workflow.
 
+Bounded read-only MCP inspection of the established bug environment is permitted
+to check data-dependent prerequisites or investigate feedback; it does not run
+the application or tests. Read [Database Evidence](../bug-diagnose/references/database-evidence.md)
+before DB inspection or a requested beta data operation. Live is always read-only.
+Beta is read-only unless the user proactively requests a specific record mutation
+and an authorized supported capability exists. An approved code-fix plan does not
+grant that permission. Keep this separate from application/test execution rights.
+
 Running a requested check does not authorize further external actions. Preserve
 the runtime's permission boundaries. Do not commit, push, deploy, mutate live
 data, modify credentials, or update/close tickets merely because code is ready
@@ -47,6 +55,13 @@ contracts that must remain. Carry forward the plan's impact table, related
 callers, known unknowns, and regression checks rather than starting the workflow
 again. If a material requirement, cause, or compatibility decision is unresolved,
 name that blocker and continue only independent work that remains justified.
+
+Reuse the diagnosis's source-and-data causal chain, including environment, time,
+record scope, transformations, scopes, and unknown branches. If a relevant stored
+value remains unknown or evidence is stale, obtain a focused read through the
+correct MCP before making a data-dependent edit. Do not repeat speculative patches
+or silently switch live/beta to find a record. Reconcile observations with the
+code and intended contract; reading a row alone does not explain the failure.
 
 For a defective shared function, carry forward the user's shared-versus-local
 choice and the listed consumers. If that choice is missing, identify the function,
@@ -99,6 +114,8 @@ Return a concise handoff containing:
 
 - Bug reference and current attempt, with the changed files or available revision/diff scope.
 - What changed and why it addresses the diagnosed cause.
+- Data evidence used, its live/beta environment and freshness, and any unobserved
+  branches; distinguish DB inspection from actual application/test execution.
 - The selected shared/local boundary and related consumers whose behavior is
   intentionally corrected, preserved, still defective, or unverified.
 - Existing and related-feature behavior preserved by the design, plus residual risks.

@@ -28,6 +28,13 @@ If access, setup, or state-changing actions outside scope are needed, report the
 specific blocker and request only what is necessary. Do not mutate live data to
 make a hypothesis easier to test.
 
+Read [Database Evidence](references/database-evidence.md) when a hypothesis depends
+on stored data or the user requests a beta data operation. It defines environment
+routing, permitted reads, and the live/beta write boundaries. A scoped read-only
+MCP query is evidence collection, not permission to execute the application or
+alter data. A separately requested beta mutation must remain within that explicit
+request; diagnosis itself never authorizes it, and live remains read-only.
+
 Do not develop an implementation plan, apply a fix, commit, deploy, mutate remote
 tickets, or invoke a later workflow from this stage. Return the diagnosis in the
 conversation by default; reuse the user's existing bug record or chosen storage
@@ -69,6 +76,30 @@ Inspect history when a regression window is available; do not blame a change
 merely because it is recent or modify the user's checkout to test old revisions.
 
 ## 3. Form and Test Hypotheses
+
+### Decide Whether Stored Data Must Be Observed
+
+Evaluate whether the reported path depends on unknown database values: missing or
+extra records, filters, pagination/counts/totals, relationships, status/null/soft
+deletion, tenant/permission conditions, or a failure limited to particular records.
+For an API payload, trace validation and transformations to the actual query inputs;
+inspect the model's connection, table, scopes, and relationship definitions.
+
+If such values determine a reachable branch, proactively query the matching
+live/beta MCP within scope before confirming that data-dependent cause. Do not
+ask the user to retrieve facts that are already accessible through the correct
+authorized MCP. If the target, capability, or record scope is unresolved, state
+what remains unknown and continue independent source analysis without guessing.
+For DB-independent logic or UI defects, omit DB queries and explain the relevant
+evidence instead. Existing evidence may be reused if its environment, scope, and
+freshness answer the question; do not repeat queries by rote.
+
+Record the derived inputs, schema/scopes, targeted query and result, environment,
+observation time, and next branch supported by that result. Trace relevant related
+records only as needed to distinguish hypotheses. A DB read does not execute the
+API; mark downstream branches as source-traced or unobserved accordingly.
+
+### Compare Hypotheses with Actual Evidence
 
 Maintain a small hypothesis table proportional to the case:
 
@@ -116,6 +147,15 @@ Keep alternative explanations and unresolved contradictory evidence visible.
 When the evidence supports configuration, data, integration, or an unmet/ambiguous
 requirement rather than a code defect, report that distinction without dismissing
 the tester or taking corrective action.
+
+For data-dependent failures, connect payload -> transformed query inputs -> stored
+result -> reachable code branch -> failing operation -> user-visible symptom.
+Cite the relevant source lines and data evidence for each established link.
+Explain which code behavior violates the requirement: a missing record may be
+legitimate and expose missing null handling, rather than prove corrupt data.
+A record dump alone is not a diagnosis; neither is a suspicious expression without
+the actual triggering conditions. If any material link is missing, retain a
+suspected/insufficient-evidence conclusion rather than claim the cause is confirmed.
 
 ## 5. Bound the Impact
 

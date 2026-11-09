@@ -67,6 +67,47 @@ work that the user has already authorized.
 For a bug-fix plan, use Controlled Bug Fix Planning below instead of duplicating
 the general planning workflow.
 
+## Bug Database Evidence and Permissions
+
+For each bug, carry the user's environment across intake, diagnosis, planning,
+fixing, feedback, and review. First establish that the affected application/project
+uses the user's `mysql_live` / `mysql_beta` connection pair, using explicit user
+context or nonsecret project connection evidence. Within that application, route
+live/production to `mysql_live` and beta to `mysql_beta`. These names do not select
+databases for unrelated projects. Resolve an unknown application-to-MCP mapping
+before querying. Use the conversation's explicit mapping for other environments;
+do not assume every staging/test environment is this beta database. If the target
+is missing or conflicting, clarify before querying while continuing useful source
+inspection. Re-establish the target for a different bug or an environment change.
+Never switch databases because the selected connection fails or is unavailable.
+Discover the tools actually callable in the session; configuration alone does not
+prove access. Do not read credentials to bypass missing tools or permissions.
+
+Live is strictly read-only, including when a requested action would write through
+an API, script, procedure, or another connection. Beta is read-only by default;
+creating, updating, or deleting records requires the user's proactive explicit
+request for that operation and a clear target and change. "Fix the bug", test
+execution permission, and plan approval are not requests to mutate beta data.
+Authorization cannot grant an unavailable capability or override a read-only tool;
+report that limitation instead of finding a bypass. These permissions do not grant
+schema changes, migrations, or administrative operations. Skill instructions do
+not enforce database grants; those remain external configuration.
+
+During diagnosis, planning, fixing, or review, bounded read-only MCP inspection is
+allowed within the established bug scope without separate application/test-running
+permission. When a reachable branch depends on unknown stored values, inspect the
+matching data if the correct MCP is available and access is authorized. Do not stop
+at a plausible code explanation. DB-independent bugs need no database query.
+Read `personal-ecc/skills/bug-diagnose/references/database-evidence.md` before DB
+inspection or handling a request to mutate beta records. Intake only records the
+environment, identifiers, and supplied evidence; it does not start DB investigation.
+
+Explain the causal chain with source locations, actual inputs and transformations,
+relevant stored values, the failing operation, and the expected-behavior basis.
+Keep missing evidence explicit. Reading DB data and tracing branches is not running
+the API, reproducing the incident, or verifying a patch. Preserve the user's
+ownership of application/test execution and each stage's stopping boundary.
+
 ## Controlled Bug Intake
 
 When the user asks to intake or triage a tester's report before investigation,
