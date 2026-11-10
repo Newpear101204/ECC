@@ -55,6 +55,40 @@ workspace file can be found. Never claim to have read an unavailable file.
    still required before implementation, state that the next step is approval or
    revision and stop at the plan artifact.
 
+## Database Context for Feature Plans
+
+For a new or changed feature, use BA/approved requirements to define desired
+behavior and source code to establish the existing flow. Trace entry points,
+branches, model/query scopes, and callers. If requirements conflict with code,
+identify the behavior decision; do not let sampled DB rows settle it.
+
+Database access is a last resort for a specific unresolved fact, not the starting
+point for feature design. First search relevant code, configuration, enums,
+migrations/seeds, tests, and documentation. Do not survey DB schemas or records
+automatically. A justified read might identify an otherwise undocumented catalog
+code used by a verified code path; check that the application actually consumes
+that table/value before treating it as relevant.
+
+Beta records, including lookup/catalog values, may have been manually edited and
+can be inconsistent. Record DB values as observed context, not business rules,
+permitted transitions, validation requirements, or the expected result of a test.
+Do not redesign the feature to match anomalous rows or promote a sampled ID into
+a hardcoded constant. If meaning remains uncertain, keep the decision open and
+seek the requirement/owner's clarification.
+
+Before any read, establish the affected application's authorized MCP and intended
+environment; do not default to beta or use live as a fallback. Live is strictly
+read-only; beta is read-only unless the user explicitly requests a scoped record
+mutation and a permitted capability exists. Planning itself never mutates data.
+Use a safe, bounded read with necessary columns only. Report the unresolved
+question, source searches, environment/time, observation, and limits. If access
+is missing, continue independent planning with the dependent fact marked unknown.
+
+This feature policy does not replace bug diagnosis: actual stored values can
+establish a reported bug's trigger, while code and requirements still explain
+why that trigger produces a defect. Follow the applicable bug workflow for that
+separate investigation.
+
 ## PRD Mode
 
 - For a `Delivery Milestones` table, select the next `pending` milestone whose

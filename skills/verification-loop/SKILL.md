@@ -18,6 +18,39 @@ Invoke this skill:
 - When you want to ensure quality gates pass
 - After refactoring
 
+## Database Context for Feature Verification
+
+Verify against BA/approved acceptance criteria and contracts, tracing code for the
+implemented flow. Do not infer business rules or expected test results from beta
+records: they may be old or manually edited, including lookup/catalog data. An
+inconsistent row alone proves neither a feature defect nor that the code is wrong.
+Keep a requirement/code conflict explicit rather than choosing the DB as authority.
+
+For a missing definition, search relevant code, config, enums, migrations/seeds,
+tests, and docs first. Only then use a targeted DB read as last-resort context for
+that named gap, confirming that code consumes the value. Do not survey the DB or
+require DB access when source and acceptance criteria already suffice.
+
+A bounded observation may also check a precise precondition or postcondition of
+an already authorized run. Derive its expected result from the contract before
+reading, and correlate it with the tested revision, inputs/record scope, environment,
+and run time. A pre-existing row, an unrelated state change, or a post-fix read
+alone does not prove the patched flow ran or passed. Distinguish observed DB state
+from runtime results and preserve NOT PERFORMED/unknown checks where appropriate.
+
+Before access, establish the affected application's authorized MCP and environment;
+never substitute live/beta for one another. Use safe reads with minimal fields and
+scope. Live is strictly read-only. Shared beta writes, including fixture/reset or
+API actions, require the user's explicit scoped mutation request and a supported
+authorized capability; verification permission alone does not grant them. Inspect
+test targets and side effects before running checks. Do not bypass read-only tools
+or run migrations/cleanup to make a check pass. DB access does not grant app/test
+execution permission. If access is missing, continue independent checks and report
+the exact data-dependent limitation without inventing success or failure.
+
+For reported bugs, retain the applicable bug workflow's hypothesis-driven reads
+to establish actual triggers; observations still do not define intended behavior.
+
 ## Verification Phases
 
 ### Phase 1: Build Verification

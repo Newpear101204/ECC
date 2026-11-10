@@ -67,10 +67,10 @@ work that the user has already authorized.
 For a bug-fix plan, use Controlled Bug Fix Planning below instead of duplicating
 the general planning workflow.
 
-## Bug Database Evidence and Permissions
+## Database Access and Bug Evidence
 
-For each bug, carry the user's environment across intake, diagnosis, planning,
-fixing, feedback, and review. First establish that the affected application/project
+For each task, carry the user's environment across its stages and feedback.
+First establish that the affected application/project
 uses the user's `mysql_live` / `mysql_beta` connection pair, using explicit user
 context or nonsecret project connection evidence. Within that application, route
 live/production to `mysql_live` and beta to `mysql_beta`. These names do not select
@@ -78,7 +78,7 @@ databases for unrelated projects. Resolve an unknown application-to-MCP mapping
 before querying. Use the conversation's explicit mapping for other environments;
 do not assume every staging/test environment is this beta database. If the target
 is missing or conflicting, clarify before querying while continuing useful source
-inspection. Re-establish the target for a different bug or an environment change.
+inspection. Re-establish the target for a different task or an environment change.
 Never switch databases because the selected connection fails or is unavailable.
 Discover the tools actually callable in the session; configuration alone does not
 prove access. Do not read credentials to bypass missing tools or permissions.
@@ -93,7 +93,7 @@ report that limitation instead of finding a bypass. These permissions do not gra
 schema changes, migrations, or administrative operations. Skill instructions do
 not enforce database grants; those remain external configuration.
 
-During diagnosis, planning, fixing, or review, bounded read-only MCP inspection is
+During bug diagnosis, bug planning, fixing, or review, bounded read-only MCP inspection is
 allowed within the established bug scope without separate application/test-running
 permission. When a reachable branch depends on unknown stored values, inspect the
 matching data if the correct MCP is available and access is authorized. Do not stop
@@ -107,6 +107,19 @@ relevant stored values, the failing operation, and the expected-behavior basis.
 Keep missing evidence explicit. Reading DB data and tracing branches is not running
 the API, reproducing the incident, or verifying a patch. Preserve the user's
 ownership of application/test execution and each stage's stopping boundary.
+
+## Feature Data Context
+
+For new or changed features, use approved BA requirements for desired behavior
+and code for the existing flow. Beta rows may be manually edited and are not
+business-rule or test-oracle authority. DB is last-resort context for a named gap
+after relevant source/config/enum/migration/seed/test/documentation searches, or
+a bounded observation tied to an authorized verification run. Do not apply the
+bug workflow's proactive trigger queries as automatic feature-data exploration.
+The feature-specific rules are maintained directly in `personal-ecc/skills/ecc-plan/SKILL.md`,
+`skills/tdd-workflow/SKILL.md`, and `skills/verification-loop/SKILL.md`, with the
+latter two also reflected in their existing `.agents/skills/` projections.
+Common connection and data permissions above apply to both features and bugs.
 
 ## Controlled Bug Intake
 

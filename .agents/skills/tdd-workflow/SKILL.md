@@ -16,6 +16,39 @@ This skill ensures all code development follows TDD principles with comprehensiv
 - Adding API endpoints
 - Creating new components
 
+## Database Context When Implementing Features
+
+For new or changed features, derive the intended behavior and test expectations
+from BA/approved requirements and contracts; derive the existing execution flow
+from code. Resolve material requirement/code conflicts explicitly. Database rows
+do not define either the business flow or a test oracle.
+
+Before consulting a DB, inspect the relevant code, config, enums, migrations/seeds,
+tests, and docs. Read only as a last resort for a named missing fact, such as the
+meaning of a catalog code that the traced code path actually consumes. Do not
+survey schemas or sample records to invent rules, transitions, or test cases.
+Beta data may be manually edited, including catalog rows; label any result as
+observed context and retain uncertainty. Do not adapt code/assertions to corrupted
+rows or hardcode a sampled ID. Build controlled cases from the intended contract;
+use anomalous beta rows only as optional robustness examples, never expected truth.
+
+Establish the application's authorized connection and environment before a safe,
+bounded read; never fall back to another DB. Live is strictly read-only. Shared
+beta is read-only unless the user proactively requests a specific record mutation
+and an authorized tool supports it. A feature request or test-running permission
+does not itself authorize beta inserts, updates, deletes, fixture setup, or cleanup,
+including via API tests. Verify that test fixture/reset commands target an isolated
+test DB within the authorized scope. Do not bypass a read-only MCP with another
+access path. DB reads do not authorize running the app or changing schema.
+
+Record why the lookup remained necessary after source inspection, its environment
+and time, result, and limitations. If unavailable or contradictory, continue only
+independent work and identify the missing fact. Test execution and RED/GREEN
+claims still require actual authorized runs; reading rows is not running a flow.
+For bug fixing, retain hypothesis-driven DB inspection to verify actual triggering
+conditions under the applicable bug workflow; do not apply feature last-resort
+lookup rules to suppress useful diagnosis.
+
 ## Core Principles
 
 ### 1. Tests BEFORE Code

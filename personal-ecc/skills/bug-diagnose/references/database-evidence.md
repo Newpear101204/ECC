@@ -4,6 +4,16 @@ Use this reference when an investigation, impact assessment, fix iteration, or
 review depends on stored data. Database evidence supplements source analysis;
 it does not replace explaining the causal mechanism or prove that an API ran.
 
+The hypothesis-driven reads and causal diagnosis below apply to reported bugs.
+For feature development, BA/approved requirements define desired behavior and code
+defines the existing flow. Beta rows may have been manually edited and must not
+define business rules or expected assertions. Use the feature sections in
+`ecc-plan`, `tdd-workflow`, and `verification-loop`: source/config/enum/migration/
+seed/test/docs first, DB only for a named unresolved fact or a bounded observation
+of an already authorized run. The connection, safe-read, and mutation boundaries
+in this reference apply to both modes; do not turn feature work into a bug
+investigation merely because a beta record differs from the intended contract.
+
 ## Select the Environment Before Access
 
 First establish from explicit user context or nonsecret project connection

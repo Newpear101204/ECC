@@ -118,6 +118,27 @@ for the procedure and [behavioral scenarios](tests/bug-data-evidence.scenarios.m
 for isolated evaluation cases. The scenarios are an evaluation specification,
 not a claim that live behavior or production permissions have been tested.
 
+## Database Context in Feature Work
+
+For features, approved BA requirements define desired behavior and source code
+defines the current flow. Beta records may have been edited manually; do not use
+them to infer business rules, redesign code, or set expected test assertions.
+Search relevant source/config/enums/migrations/seeds/tests/docs first. DB reads
+are last-resort context for a specific missing fact, such as an undocumented
+catalog code actually consumed by the application. Even catalog rows need scrutiny.
+Verification may also correlate a precise DB observation with an authorized run;
+a row already in the desired state does not prove that run happened or passed.
+The existing live/beta access boundaries remain unchanged.
+
+These rules live directly in personal `ecc-plan` and the existing upstream
+`skills/tdd-workflow/SKILL.md` and `skills/verification-loop/SKILL.md`. Their existing
+`.agents/skills/` projections contain the same added sections for Codex discovery.
+This explicitly authorized upstream customization may need manual merging after
+an upstream pull; review these sections for semantic drift as well as conflicts.
+It introduces no replacement skill names, profile entries, or installer changes.
+See [feature evaluation scenarios](tests/feature-data-context.scenarios.md) for
+isolated cases; they are a specification, not proof of executed checks.
+
 ## Update from Upstream
 
 With a clean working tree on `personal`:
