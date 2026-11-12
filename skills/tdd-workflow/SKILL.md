@@ -71,6 +71,26 @@ For bug fixing, retain hypothesis-driven DB inspection to verify actual triggeri
 conditions under the applicable bug workflow; do not apply feature last-resort
 lookup rules to suppress useful diagnosis.
 
+## Managed Worker Handoff
+
+Keep clear small changes inline. For an admitted parallel task, follow
+`team-agent-orchestration`: use the assigned worktree and baseline, task/attempt
+identity, input versions, owned paths, acceptance criteria, and execution limits.
+Do not change a shared contract or another worker's files without returning the
+decision to the integrator. A native subagent does not create worktree isolation.
+Default managed-run DB permission is `none`; task/plan approval cannot override
+that, enable database-writing API tests, or authorize fixture/reset commands.
+
+Submit changed paths, summary, revision, artifacts, and named validation results
+with evidence. Mark unrun checks `not-run`; do not infer RED/GREEN from a process
+exit or existing data. Submission is not acceptance or integration. Reviews bind
+to the current attempt and output hash; corrections require fresh evaluation.
+Checkpoint guidance below does not grant commit authority. Preserve explicit
+user-owned checks and bug-stage stops; no automatic commit, push, or deployment.
+The current JSON-run CLI uses manual `prepare`/`submit` handoffs; public
+`run --execute` is blocked pending a verified no-DB sandbox adapter. Do not replace
+it with an arbitrary shell wrapper or claim native-agent work is OS-isolated.
+
 ## Core Principles
 
 ### 1. Tests BEFORE Code

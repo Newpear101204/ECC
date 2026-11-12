@@ -1,0 +1,4 @@
+interface:
+  display_name: "ECC View"
+  short_description: "Inspect task progress and its read-only local dashboard"
+  default_prompt: "Use $ecc-view to show progress for the current task and its available dashboard."

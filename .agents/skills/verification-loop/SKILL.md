@@ -49,6 +49,27 @@ the exact data-dependent limitation without inventing success or failure.
 For reported bugs, retain the applicable bug workflow's hypothesis-driven reads
 to establish actual triggers; observations still do not define intended behavior.
 
+## Managed Task Acceptance
+
+For parallel runs, evaluate the submitted task/attempt and exact output revision
+and hash against its acceptance criteria. Use named check results and their
+evidence, not a worker's "done" message or exit code. Unrun/failed required checks
+remain unresolved. Record the reviewer identity independently of the worker and
+return `approved` or `changes_requested` with reasons and criterion coverage.
+Later edits invalidate the old verdict; code acceptance and integration are
+separate gates. Do not mark dependent code ready on artifact acceptance when it
+requires integration into its baseline.
+
+The explicit JSON-run runtime does not use existing ECC SQLite databases and
+defaults tasks to database `none`. Verification may not query MCP DBs, write
+records indirectly, seed/reset data, or run migrations under that contract. Use
+isolated permitted fixtures and preserve application/test execution rights. This
+internal gate does not automatically start a personal `bug-review` stage, commit,
+push, merge, or deploy. Small work still needs only proportionate inline checks.
+The current CLI is preview/manual-handoff only and rejects `run --execute` until
+a verified no-DB sandbox adapter exists. Manual result submission and independent
+revision/hash checks do not establish a technical no-DB sandbox for the agent.
+
 ## Verification Phases
 
 ### Phase 1: Build Verification

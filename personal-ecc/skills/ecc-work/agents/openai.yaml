@@ -1,0 +1,4 @@
+interface:
+  display_name: "ECC Work"
+  short_description: "User-controlled development with adaptive agent coordination"
+  default_prompt: "Use $ecc-work to handle this task with the lightest suitable workflow and existing permissions."

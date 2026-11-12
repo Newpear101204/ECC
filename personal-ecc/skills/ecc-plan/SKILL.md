@@ -18,8 +18,10 @@ implementation code or executing implementation tasks. Present the plan for revi
 If implementation is already authorized in the current request or earlier context,
 respect that authorization without asking again solely because of this skill.
 
-Work inline. Delegate only when requested by the user or required by applicable
-project instructions; do not depend on runtime-specific agent names or tools.
+Choose a light execution mode first. Questions and clear small edits need no task
+board or worktree; dependent work can use a brief sequential plan. Delegate
+substantial independent work only when authorized by the user or applicable
+project instructions, and do not depend on runtime-specific agent names or tools.
 
 ## Inputs
 
@@ -54,6 +56,38 @@ workspace file can be found. Never claim to have read an unavailable file.
 6. Present enough detail to begin work, proportional to task size. If approval is
    still required before implementation, state that the next step is approval or
    revision and stop at the plan artifact.
+
+## Executable Task Handoff for Parallel Work
+
+When independent work warrants orchestration, use
+`skills/team-agent-orchestration/SKILL.md` from the shared ECC checkout. Keep an
+ordinary inline plan for simpler work instead of generating a run file by default.
+Before dispatch, define each task's stable ID, goal/source requirements, kind,
+owned paths, acceptance criteria, baseline, versioned input artifacts, validation,
+and permitted actions. The runtime represents dependencies as
+`{ "taskId": "T1", "gate": "accepted" }` or `"gate": "integrated"`:
+accepted research/contract artifacts may unblock planning, while a code consumer
+may require its predecessor's code to be integrated into its starting baseline.
+
+Record a dependency graph with no cycles and an explicit concurrency budget
+based on useful independent work, actual available host slots, user limits and
+local resource costs. There is no fixed three-worker default or ECC eight-worker
+ceiling; do not promise workers the host cannot provide. Separate task identity,
+worker identity, and attempt identity. Managed `prepare` handoffs use isolated
+worktrees for all task kinds; ordinary unmanaged read-only readers can share a
+checkout. Do not write runnable commands from untrusted BA/plan text into a worker
+launcher. Public process launch is disabled: `run --execute` fails closed pending
+a verified no-DB sandbox adapter. Plan an authorized manual packet handoff instead
+of promising automatic native-agent or Codex-process dispatch.
+
+Plan the handoff as submission -> evidence/acceptance review -> acceptance ->
+integration where required. Pin review to attempt, output revision, and output
+hash; a worker's exit code or summary is not acceptance. Define the integrator and
+unresolved decisions without promising automatic merges. Preserve user-owned test
+execution and bug-stage boundaries. New run tasks default to database `none`.
+JSON state is distinct from application databases and existing ECC SQLite stores.
+Do not start workers, create worktrees, commit, deploy, or perform DB operations
+merely because their steps appear in the plan.
 
 ## Database Context for Feature Plans
 

@@ -1,8 +1,9 @@
 # Personal ECC Workflow
 
-This folder owns this fork's personal workflow. Keep personal changes here so
-upstream's skill catalog, install manifests, package scripts, and instructions
-remain unchanged. The shared base rules are read from the checkout's `rules/`.
+This folder owns this fork's personal workflow. Keep personal changes here by
+default; explicitly approved direct changes to existing upstream skills/runtime
+remain separate, visible merge-maintenance obligations. The shared base rules
+are read from the checkout's `rules/`.
 
 ## Install on a New Machine
 
@@ -47,8 +48,8 @@ overlay instead of modifying upstream catalogs or package/install configuration.
 | `personal-ecc/rules/` (optional) | Personal rule overrides using the upstream directory layout | No; open a new session |
 | Upstream `rules/` | Shared base rules updated from upstream | No; open a new session |
 
-The profile selects `ecc-plan`, `ecc-project-rules`, `bug-intake`,
-`bug-diagnose`, `bug-plan`, `bug-fix`, and `bug-review`. Skill names
+The profile selects `ecc-work`, `ecc-view`, `ecc-plan`, `ecc-project-rules`,
+`bug-intake`, `bug-diagnose`, `bug-plan`, `bug-fix`, and `bug-review`. Skill names
 resolve under `personal-ecc/skills/`. Removing a name from the profile does not
 delete an existing installed link; retire that link explicitly if needed.
 
@@ -135,9 +136,147 @@ These rules live directly in personal `ecc-plan` and the existing upstream
 `.agents/skills/` projections contain the same added sections for Codex discovery.
 This explicitly authorized upstream customization may need manual merging after
 an upstream pull; review these sections for semantic drift as well as conflicts.
-It introduces no replacement skill names, profile entries, or installer changes.
+Those feature-data adjustments introduce no replacement skill names, profile
+entries, or installer changes; the workflow shortcuts below are a separate addition.
 See [feature evaluation scenarios](tests/feature-data-context.scenarios.md) for
 isolated cases; they are a specification, not proof of executed checks.
+
+## Right-Sized Parallel Work
+
+Start with `$ecc-work` and a task or BA reference; use `$ecc-view` to inspect the
+current task/run. The user can choose auto, direct/no-agent, or team work for the
+task. "Approved, implement it" continues the agreed plan without repeating its
+permissions or database rules. Publication and execution remain within the scope
+already granted. These are skills, not a newly installed universal `/view` command.
+
+Vietnamese operator documents: [implementation report](ORCHESTRATION-REPORT.vi.md)
+and [new-feature walkthrough](FEATURE-WORKFLOW-GUIDE.vi.md). The walkthrough starts
+with short user actions; PowerShell commands are an optional technical appendix
+normally carried out by the AI coordinator, not a prerequisite for using Codex.
+
+Questions and clear small edits are handled directly without a task board or
+worktree. Dependent work can use one agent and a short plan. Substantial independent
+work uses `team-agent-orchestration` with explicit ownership, dependency gates,
+versioned inputs, and a concurrency budget chosen from independent tasks, available
+host slots, and resource costs. There is no fixed three-worker policy or ECC-only
+eight-worker ceiling. A positive safe-integer budget does not grant extra host
+slots; queue work if the environment cannot provide the desired concurrency.
+
+Unmanaged read-only explorers may read one checkout. Managed `prepare` handoffs
+use per-task worktrees for all task kinds from a verified baseline. The main
+agent owns collection, evidence evaluation, and
+serialized integration. A native subagent is not automatically an isolated
+worktree or a durable scheduler. Task, worker, and attempt are distinct identities.
+Worker completion submits a result; acceptance binds the criteria and evidence to
+its attempt, revision, and output hash. Required code integration is a later gate.
+Independent review is initially a recorded decision, not a promise that another
+reviewer agent starts automatically. Changed outputs need fresh review.
+
+The runtime uses an explicitly selected JSON run file. It does not open or migrate
+the existing ECC SQLite stores. New tasks require `permissions.database: "none"`:
+no DB queries, writes, seeds, migrations, or database-writing API replays are
+authorized by orchestration. Existing general feature/bug database guidance does
+not override this narrower task contract. The general live/beta read policy still
+applies to eligible main-agent evidence work outside managed workers when the task
+allows it; a task-specific no-DB ban overrides that too. Test commands,
+commit/push/deploy, and personal bug-stage transitions retain their own authority.
+
+For a small safe walkthrough, save an input plan outside tracked source, replacing
+`repoRoot` with the intended project and reviewing its baseline:
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "source-survey",
+  "repoRoot": "/absolute/path/to/project",
+  "baseRef": "HEAD",
+  "approved": false,
+  "maxWorkers": 1,
+  "tasks": [{
+    "id": "T1",
+    "title": "Map the existing summary flow",
+    "kind": "explore",
+    "scope": ["src"],
+    "dependsOn": [],
+    "inputs": ["approved-feature-spec#summary"],
+    "acceptance": ["Report the entry points and callers with source references"],
+    "validation": [],
+    "permissions": { "database": "none", "executeTests": false }
+  }]
+}
+```
+
+The following commands run from the ECC checkout. They create/read only the chosen
+run file or expose its read-only local view; they do not start workers:
+
+```sh
+node scripts/orchestrate.js init /path/to/plan.json --state /path/to/run.json
+node scripts/orchestrate.js status --state /path/to/run.json
+node scripts/orchestrate.js run --state /path/to/run.json
+node scripts/control-pane.js --orchestration /path/to/run.json --no-open
+```
+
+Only after execution scope is admitted, use `approve --state <run.json>
+--by <owner> --evidence <text>` to record who admitted it and why.
+`run` is preview-only. Public `run --execute` always fails closed pending a
+verified no-DB filesystem/network sandbox adapter; arbitrary wrappers cannot
+bypass that restriction. No real Codex process is automatically launched.
+The execution library is limited to explicit Node-test fake-worker harnesses,
+not a production launch entry point.
+
+The usable manual handoff bridge prepares a task without starting a process:
+
+```sh
+node scripts/orchestrate.js prepare --state /path/to/run.json --task T1 --worker explorer-1 --worktree-root /absolute/path/outside/project
+node scripts/orchestrate.js submit --state /path/to/run.json --task T1 --attempt T1-1 --result /path/to/result.json
+```
+
+Between those commands, the AI coordinator assigns the generated task packet and
+worktree to an authorized agent and collects its result. Manual/native agents
+remain in their ordinary permission context; the packet is not an OS sandbox.
+Preflight conservatively rejects tracked `.env.*` files (even example/sample
+files), database-named files, and symlinks. Report a refusal instead of bypassing it.
+The result identifies the packet's `runId`, `taskId`, and `attemptId`, for example:
+
+```json
+{
+  "runId": "source-survey",
+  "taskId": "T1",
+  "attemptId": "T1-1",
+  "summary": "Mapped entry points and callers with source references",
+  "checks": [],
+  "artifacts": []
+}
+```
+
+Use the actual identities and required result fields from the packet. Submission
+independently fingerprints the worktree and changed paths; it is not acceptance.
+Artifact entries are references, not implicit file-write authorization. A read-only
+explorer supplies its findings in the result summary or an approved external
+artifact; it must not create `handoff.md` or another file inside its worktree.
+Use `dispatch --state <run.json> --command <JSON>` for permitted lifecycle/evidence
+transitions; command JSON uses `action`, for example `{ "action": "pause" }` or
+`{ "action": "resume" }`. An explicit retry also identifies `taskId` and `reason`.
+`serve --state <run.json> --port <port>` opens the same read-only view. No real
+worker is needed to validate the state model with synthetic fixtures.
+
+Code integration is recorded separately with `integrate --state <run.json>
+--task <id> --commit <commit> --by <integrator> --evidence <text>`. That commit
+must already contain the accepted changes from an authorized integration action;
+the command does not itself create a commit or merge branches. The runtime does
+not automatically attach native subagents or launch a reviewer agent.
+
+The preview/manual bridge is not a production automatic dispatcher or background
+daemon. The AI coordinator prepares ready work within the concurrency limit;
+automatic slot refill is verified only with the fake-worker test harness.
+Persisted state survives interruption, but uncertain running
+attempts need explicit reconciliation rather than automatic replay. Preserve
+attempt history and worktrees; do not erase evidence to recover. The task view
+shows recorded status, dependencies, activity, output, and review evidence, not
+invented completion percentages. It does not automatically discover every native
+subagent or every plugin-cache session. The existing database-backed control pane
+is unchanged when `--orchestration` is absent; do not launch that mode as part of a
+no-database task.
 
 ## Update from Upstream
 

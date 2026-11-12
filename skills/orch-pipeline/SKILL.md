@@ -53,9 +53,19 @@ Phase 0 (Intake) always runs and is omitted from the mask column above. The
 tie-breaker: anything touching a security trigger (below) or a public API /
 contract is **at least** standard, regardless of file count.
 
+Risk tier and agent count are separate choices. Clear small work stays inline;
+ordered work can stay with one agent. Use `team-agent-orchestration` only when
+substantial independent tasks justify the coordination cost. Honor explicit
+single-agent/plan-only preferences. For managed parallel work, produce task IDs,
+accepted-versus-integrated dependencies, bounded concurrency, owned paths,
+versioned inputs, and evidence gates before dispatch. Keep exploratory readers
+separate from code workers in dedicated worktrees. Do not create a board or run
+file for every request merely to satisfy this pipeline.
+
 ## The phases
 
-Each phase delegates — it does not do the work inline.
+In multi-agent mode, phases delegate to the appropriate role. In right-sized
+single-agent mode, perform the relevant phase inline within the same authority.
 
 - **0. Intake** — restate the request. For `orch-build-mvp`, read the spec/design
   doc and extract scope, locked decisions, and a feature list.
@@ -82,7 +92,20 @@ This family is **gated, not autonomous**:
 2. **GATE 2 — before Commit.** Present the diff summary and proposed messages;
    do not commit until the user confirms.
 
-Everything between the gates flows without stopping.
+Within admitted scope, ready independent tasks can proceed without repeated
+permission requests. Dependencies, evidence gates, user-owned execution, and any
+explicit stage stops still apply. Parallel dispatch never grants DB access,
+commit/push/deploy authority, or an automatic transition through personal bug stages.
+
+Managed task completion means more than a finished process: retain task/attempt
+identity, revision, output hash, evidence, and review decision. The integrator
+serializes integration and rejects stale results. The JSON-run runtime defaults
+to no database access and does not use the existing ECC SQLite stores. Native
+subagent threads alone are not a durable queue or isolated code worktrees.
+The public JSON-run CLI is currently preview/manual-handoff only: `run --execute`
+fails closed without a verified no-DB sandbox adapter. Use `prepare`/`submit` to
+hand task packets to authorized agents; never promise automatic Codex launching
+or treat ordinary native-agent permissions as a database-denying sandbox.
 
 ## Agent / command map
 

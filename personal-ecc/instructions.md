@@ -67,6 +67,80 @@ work that the user has already authorized.
 For a bug-fix plan, use Controlled Bug Fix Planning below instead of duplicating
 the general planning workflow.
 
+## Right-Sized Task Orchestration
+
+`$ecc-work` is the short personal entry point for starting or continuing development;
+read `personal-ecc/skills/ecc-work/SKILL.md` when it applies. A long bootstrap prompt
+is not required for each task. Natural requests to show progress route to
+`personal-ecc/skills/ecc-view/SKILL.md` (`$ecc-view`); no universal `/view` command
+is installed. Both are user-facing skills, not automatic background services.
+
+Default to adaptive selection. Honor per-task direct/no-agents, team/parallel,
+plan-only, and concurrency preferences until the user changes them. Plain approval
+of the identified plan authorizes its implementation within existing permissions;
+do not demand repeated DB reminders or a long restatement. Internal run files,
+packets, CLI operations and worker collection belong to the main AI, not the user.
+
+### Main-AI Supervision Required
+
+The user works directly with the main AI. All task execution and worker dispatch
+must remain under its active coordination. Do not enable or propose a detached
+scheduler/daemon that continues development after the main session stops, even
+if a sandbox adapter becomes available. Changing this preference requires the
+user's explicit request. Parallel workers are allowed under main-AI supervision.
+Before a controlled stop/handoff, stop dispatch, request active workers to stop,
+verify their state where possible, and preserve results. An abrupt disconnect
+does not prove workers stopped: record uncertainty and reconcile before resuming;
+do not claim automatic process termination that the host cannot guarantee.
+A passive read-only dashboard may remain visible; it must never dispatch work.
+
+Choose the lightest sufficient execution mode before creating orchestration state:
+answer questions and make clear small edits inline; use a brief sequential plan
+when steps are dependent; delegate only substantial independent work. File count
+alone is not the decision. Risk may require stronger verification without more
+agents. Honor explicit "no agents", "plan only", and concurrency preferences.
+
+For eligible parallel work, read `skills/team-agent-orchestration/SKILL.md` and
+use the explicit JSON-run runtime in `scripts/orchestrate.js`. Shape task IDs,
+dependency gates, source/acceptance references, input versions, ownership, allowed
+actions, and expected outputs before dispatch. Choose an explicit concurrency
+budget from useful independent tasks, actual free host slots, user preferences,
+and CPU/RAM/I/O costs of local commands. There is no fixed three-worker default or
+ECC eight-worker ceiling. Host/tool limits remain binding; queue and refill ready
+work rather than claiming unavailable workers or violating dependencies.
+Unmanaged read-only explorers may share a checkout. The managed `prepare` handoff
+creates an isolated worktree/task packet for every task kind from a verified
+baseline. Native subagents do not provide that isolation by merely being spawned;
+the main agent assigns an authorized agent to the packet and owns collection and
+serialized integration. Native agent permissions are not a separate OS sandbox.
+
+The new runtime persists explicit JSON run files and does not open, initialize,
+migrate, or mutate the existing ECC SQLite stores. Database access for orchestrated
+tasks is constrained to `none` by the current managed-worker contract. Do not query
+MCP databases, run seeds/migrations, or replay database-writing APIs in those
+workers. This implementation limit is not a blanket ban on all future main-agent
+DB evidence gathering. Outside managed workers, the standing DB policy below
+applies when the task permits it. A task-specific ban on all DB interaction takes
+precedence everywhere; do not move a forbidden action to the main agent to bypass it.
+Keep application/test execution, commit, push, and deployment within separately
+established authority. Public `run` is preview-only: `run --execute` fails closed
+until a verified no-DB filesystem/network sandbox adapter exists. No real Codex
+process or arbitrary wrapper is launched by this CLI. Scheduler execution is
+restricted to explicit Node-test fake-worker harnesses, not a production entry.
+Use manual `prepare`/`submit` handoffs for authorized agents in the meantime;
+those agents must obey the no-DB contract in their normal permission context.
+Neither handoff preparation nor a scheduling preview authorizes a later bug stage.
+
+Agent process completion is only submission. Accept output against its acceptance
+criteria and actual evidence, bound to task, attempt, revision, and output hash.
+An independent reviewer identity may record that decision; automatic reviewer
+agents are not implied. Distinguish accepted artifacts from integrated code when
+unlocking dependencies. Revisions changed after review need fresh evaluation.
+Report milestones, published tool activity, blockers, and evidence rather than
+invented progress percentages or private reasoning. Preserve state on interruption;
+do not replay completed or uncertain work on resume. Pausing/cancellation and
+explicit retry/reconciliation must preserve prior attempts and user-stage stops.
+
 ## Database Access and Bug Evidence
 
 For each task, carry the user's environment across its stages and feedback.
