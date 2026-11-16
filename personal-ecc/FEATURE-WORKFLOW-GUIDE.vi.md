@@ -143,6 +143,24 @@ trong menu và xác minh nguồn khi có dấu hiệu không khớp.
 
 ### Bước 1: AI làm rõ yêu cầu
 
+AI phải hỏi khi yêu cầu, đầu ra mong muốn hoặc luồng nghiệp vụ còn chưa rõ hay
+mâu thuẫn: giữa các tài liệu đầu vào, tài liệu cũ, contract/test và luồng code đang
+hoạt động. Không chỉ là BA so với Figma, và không miễn trừ vì việc nhỏ hay đã được
+nói “triển khai”. AI trình bày bằng chứng, các cách hiểu nghiệp vụ và hệ quả rồi hỏi.
+Ví dụ: tài liệu mới không nói giữ hay bỏ một quy tắc nghiệp vụ mà luồng cũ đang dùng.
+Phần phụ thuộc câu trả lời phải chờ; AI vẫn xác minh sự thật và làm phần độc lập.
+
+Ngược lại, cách dùng kỹ thuật nào, tổ chức component, chọn thư viện/thuật toán,
+sửa hàm chung hay xử lý riêng, giải quyết xung đột kỹ thuật và giữ/thay đổi tương
+thích kỹ thuật để đáp ứng đầu ra đã chốt là trách nhiệm AI. AI tự cân nhắc, chọn,
+kiểm tra trong quyền đã cấp và giải thích quyết định cần thiết; không bắt bạn chọn
+chỉ vì có nhiều phương án kỹ thuật. Chỉ hỏi nếu phát hiện đó làm thay đổi/đòi hỏi
+chốt lại nghiệp vụ, đầu ra, phạm vi đã giao hoặc cần thêm quyền thực hiện.
+
+Quyết định bạn đã chốt rõ được dùng tiếp, không hỏi lại. Khác biệt giữa code cũ
+và thay đổi đã yêu cầu rõ không tự tạo thành mâu thuẫn mới. Tự chủ kỹ thuật không
+cấp quyền ghi DB, chạy test/app hay xuất bản ngoài giới hạn đã giao.
+
 Bạn cần nhận được danh sách tiêu chí như `AC-01`, `AC-02`, kèm điểm chưa rõ.
 Ví dụ với đăng ký lịch thi: ai được đăng ký, điều kiện đủ chỗ, xử lý đăng ký trùng,
 thông báo lỗi và quyền xem lịch. Đây là ví dụ, không phải nghiệp vụ được mặc định.

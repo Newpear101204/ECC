@@ -304,3 +304,27 @@ AI chính. Dừng có kiểm soát phải ngừng giao mới, yêu cầu dừng 
 gián đoạn đột ngột cần kiểm tra lại trạng thái, không hứa có cơ chế tự kill process.
 Dashboard chỉ đọc không phải ngoại lệ cho phép tự chạy task. Đây là lựa chọn thiết
 kế của người dùng, không phải một tính năng chạy nền đang chờ được bật.
+
+## 13. Cập nhật 16/11: hỏi về nghiệp vụ, AI tự chủ kỹ thuật
+
+Theo làm rõ cuối cùng của người dùng, quy tắc áp dụng cho yêu cầu, đầu ra và luồng
+nghiệp vụ chưa rõ/mâu thuẫn ở mọi nhiệm vụ, skill và giai đoạn. Nguồn có thể là
+BA/Figma, tài liệu cũ, code/consumer cũ, contract, test hoặc quan sát thực tế.
+
+Khi nghiệp vụ chưa rõ, AI trình bày bằng chứng, các cách hiểu và hệ quả rồi hỏi;
+phần phụ thuộc phải chờ. Quyết định đã rõ được dùng tiếp, không hỏi lại.
+Các phương án triển khai kỹ thuật, sửa chung/riêng, lựa chọn thư viện, thuật toán,
+component và tương thích kỹ thuật để phục vụ đầu ra đã chốt do AI tự quyết định,
+kiểm tra trong quyền được cấp và giải thích khi cần. Không hỏi chỉ vì các phương
+án có chi phí/rủi ro kỹ thuật khác nhau. Chỉ đưa lại người dùng nếu có nghiệp vụ
+chưa chốt, thay đổi đầu ra/phạm vi hoặc cần thêm quyền. Bản mở rộng trước đó buộc
+hỏi mọi lựa chọn kỹ thuật đã được thay thế bằng ranh giới này.
+
+Đã cập nhật bootstrap, ecc-work/ecc-plan, các quy tắc chọn kỹ thuật trong bug-plan/
+bug-fix, tài liệu hướng dẫn và bộ đặc tả tình huống C1–C16. Kiểm tra
+setup/cài skill đạt 38/38; kiểm tra liên kết đạt. Hai mô phỏng phản hồi cho tình
+huống đầu ra đã rõ nhưng có nhiều phương án kỹ thuật và tình huống quy tắc thông
+báo của luồng cũ chưa được chốt đều cho phản hồi phù hợp: tự chọn kỹ thuật ở trường
+hợp đầu, hỏi về nghiệp vụ ở trường hợp sau. Đây là kiểm tra giới hạn, không phải
+bảo đảm mọi lần mô hình đều tuân thủ.
+Không sửa runtime, không truy cập DB và chưa commit/push đợt chỉnh chỉ dẫn này.

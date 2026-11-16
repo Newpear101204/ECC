@@ -24,8 +24,34 @@ Interpret preferences naturally; these are conversation choices, not CLI flags:
   default stop yields to separately granted broader implementation authority.
 
 Carry preferences through the current task until the user changes them. Do not
-silently change global configuration. Ask only when intent or a consequential
-decision remains ambiguous; do not require a repeated bootstrap or permissions prompt.
+silently change global configuration. Ask about unresolved requirements, desired
+output or business-flow conflicts. Own technical decisions for the agreed output;
+do not require repeated bootstrap or approval for decisions already settled.
+
+## Business Clarification Gate and Technical Autonomy
+
+Compare relevant new/old documents, BA/design, contracts/tests and actual code/
+consumer flows. Ask when they leave the required outcome or business rules unclear
+or contradictory; do not silently select one business meaning. Small/direct tasks
+and generic implementation approval do not bypass this. Apply an explicit relevant
+user decision without duplicate questions. Disclose unavailable evidence. Read
+[requirement clarification](../../references/requirement-clarification.md) for the
+procedure and example. Its canonical path is
+`personal-ecc/references/requirement-clarification.md` under the shared ECC root;
+use that path rather than an installed-link parent directory.
+
+Hold only work dependent on that business answer. Main AI owns the question and
+records/propagates the answer to affected workers/reviewers. Continue independent
+authorized work. Clear requested changes need no reapproval because old code differs.
+
+Resolve engineering alternatives autonomously: architecture, dependencies,
+algorithms, components, shared/local correction, technical compatibility, test
+mechanics and conflicting worker recommendations. These need not be equivalent
+or preselected by convention. Use evidence, weigh risks, choose and check within
+authority; explain important choices instead of making the user choose them.
+Ask only if a technical finding exposes disputed business behavior, changes the
+agreed outcome/scope or requires additional permission. Never disguise a business
+decision as technical or use technical autonomy to bypass DB/execution limits.
 
 ## Working Procedure
 
@@ -36,7 +62,8 @@ decision remains ambiguous; do not require a repeated bootstrap or permissions p
    existing implementation and granted actions. A clear small change stays inline.
    For meaningful planning, follow `personal-ecc/skills/ecc-plan/SKILL.md`.
 3. Honor a plain approval of an identified plan as authority to implement that
-   scope. It does not add DB writes, app/test execution, publication, or deployment
+   scope, subject to the work clarification gate above. It does not add DB
+   writes, app/test execution, publication, or deployment
    outside established permissions. Do not ask the user to restate existing rules.
 4. For parallel work, read `skills/team-agent-orchestration/SKILL.md`. Select an
    explicit run budget from useful independent work, actually available agent

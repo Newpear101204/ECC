@@ -63,19 +63,21 @@ correct MCP before making a data-dependent edit. Do not repeat speculative patch
 or silently switch live/beta to find a record. Reconcile observations with the
 code and intended contract; reading a row alone does not explain the failure.
 
-For a defective shared function, carry forward the user's shared-versus-local
-choice and the listed consumers. If that choice is missing, identify the function,
-report the consumer locations and expected effects, and present the direct shared
-correction and any viable local alternative before editing that boundary. Do not
-default to a feature flag or wrapper because other features use the function.
-Existing explicit authorization of the disclosed boundary is sufficient; do not
-ask again merely because the function is shared. A generic request to fix one
-feature does not by itself settle an undisclosed shared-versus-local choice.
+For a defective shared function, identify consumers and effects and honor explicit
+user constraints. If no technical boundary was selected, choose a justified
+shared/local correction autonomously within agreed business results and work scope;
+explain the choice and checks instead of asking the user to make an engineering
+selection. Ask before dependent edits if intended behavior/old business-flow
+effects are unclear or the change exceeds scope/authority. Do not default to a
+feature flag or wrapper merely because other features use the function. Existing
+explicit decisions do not need approval again because the function is shared.
 
 ## 2. Implement the Coherent Correction
 
-Make the smallest coherent change that addresses the cause. Follow the approved
-local/shared correction boundary and existing repository patterns. Preserve
+Make the smallest coherent change that addresses the cause. Respect explicit
+scope/behavior constraints and existing repository patterns; refine technical
+shared/local implementation autonomously within them, explaining consequential
+changes and updating the plan without a redundant engineering-choice question. Preserve
 valid behavior, error handling, authorization, API/type/null semantics, ordering,
 pagination, and other caller-specific contracts identified in the plan.
 

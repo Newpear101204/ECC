@@ -67,6 +67,35 @@ work that the user has already authorized.
 For a bug-fix plan, use Controlled Bug Fix Planning below instead of duplicating
 the general planning workflow.
 
+## Business Clarification and Technical Autonomy
+
+For every task and skill, ask the user when the task's requirements, desired
+output or business workflow remain unclear or conflict. Sources include new/old
+documents, BA/design, contracts, tests and existing code/consumer flows. Do not
+silently choose which business rule to preserve, replace or invent. This applies
+even to small tasks, direct mode and newly discovered conflicts after approval.
+Read `personal-ecc/references/requirement-clarification.md` for the procedure.
+
+Investigate facts within authority, then present the competing business meanings,
+evidence and impact and ask. Hold only work dependent on the unresolved outcome;
+independent authorized work may continue. Workers escalate to the main AI, which
+asks the user and passes the answer to affected tasks/reviewers. Generic approval
+does not settle a new/undisclosed business decision. Reuse explicit applicable
+decisions without asking again. An intentional approved change from old behavior
+does not need duplicate approval merely because the old code is different.
+
+The AI owns technical execution for the agreed output: choose architecture,
+libraries, components, algorithms, shared/local fixes and technical compatibility
+strategies; resolve implementation/test/worker disagreements using evidence and
+project constraints. Do not ask the user to choose engineering alternatives just
+because costs, risks or implementations differ. Investigate, decide, verify as
+authorized and explain consequential technical decisions. Escalate a technical
+finding only when it reveals a missing/conflicting business requirement, changes
+the agreed output/business flow, exceeds the agreed work scope, or needs authority
+not already granted. Existing DB, execution and publication limits still apply;
+technical autonomy does not grant new permissions. Main AI settles technical
+disagreements between workers; it must not settle disputed business intent by vote.
+
 ## Right-Sized Task Orchestration
 
 `$ecc-work` is the short personal entry point for starting or continuing development;
@@ -220,8 +249,10 @@ shared components, and other consumers using source and contract evidence.
 Include behavior-preservation criteria and risk-linked regression checks.
 For defective shared code, list consumer locations and expected effects, recommend
 the direct correction when supported by the shared contract, and present any viable
-local compatibility option. Let the user select the boundary unless already
-authorized; do not default to feature flags merely to freeze defective behavior.
+local compatibility option where useful. Select the technical correction boundary
+autonomously within agreed scope and intended behavior; ask only about unresolved
+business effects, changed output/scope or missing authority. Do not default to
+feature flags merely to freeze defective behavior.
 Return the plan for review and stop before implementation. Preserve uncertainty
 when the diagnosis or compatibility decisions remain unresolved. Do not add a
 redundant approval gate to separately authorized broader work.
@@ -230,10 +261,11 @@ redundant approval gate to separately authorized broader work.
 
 When asked to implement a scoped bug fix or correct a failed attempt, read
 `personal-ecc/skills/bug-fix/SKILL.md`. The user runs the application and checks
-by default. Honor the selected shared/local correction boundary; an approved
-shared correction should fix the shared function rather than silently introduce
-a feature-only workaround. Resolve a missing boundary decision before dependent
-edits, and do not ask again for a boundary already explicitly authorized. Do not
+by default. Honor explicit business/scope constraints. Choose or refine technical
+shared/local boundaries within them, explaining consequential changes and avoiding
+workarounds that merely hide the defect. Clarify unresolved business effects
+rather than outsourcing engineering choices to the user. Honor explicit boundary
+constraints without re-asking. Do not
 automatically execute tests/builds or start formal review;
 provide the changed scope, expected results, and steps for the user to run.
 Write appropriate regression tests as planned, marking them unexecuted until

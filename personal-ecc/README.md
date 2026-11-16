@@ -66,7 +66,9 @@ again on each machine after pulling a profile that adds a skill.
 
 For a defect in a shared function, `$bug-plan` lists the known call sites and
 feature-level effects, compares a direct shared correction with any viable local
-compatibility option, and records your choice. Preserving other features means
+compatibility option, and selects a technical approach within the agreed outcome
+and scope. It asks you when business behavior is disputed or scope/authority must
+change, not merely because shared/local engineering options exist. Preserving other features means
 preserving intended valid behavior. It does not require freezing the same defect
 in every caller. `$bug-fix` follows your selected boundary; it does not silently
 replace an approved shared correction with a feature-specific flag or wrapper.
@@ -142,6 +144,22 @@ See [feature evaluation scenarios](tests/feature-data-context.scenarios.md) for
 isolated cases; they are a specification, not proof of executed checks.
 
 ## Right-Sized Parallel Work
+
+### Work Clarification and User Decisions
+
+The personal bootstrap asks about unresolved requirements, desired results and
+business-flow conflicts across new/old documents, legacy code, contracts, tests
+and observations, not just BA/design disagreements. Hold only work dependent on
+that business answer; do not turn a guess into approved behavior. Reuse explicit
+decisions without re-asking. The AI selects technical approaches, shared/local
+boundaries and technical compatibility strategies autonomously within agreed
+outcomes, scope and permissions. Different engineering tradeoffs do not themselves
+require a question. Generic implementation approval does not settle a newly found
+business contradiction or grant additional authority. See the shared
+[clarification procedure](references/requirement-clarification.md) and
+[behavioral scenarios](tests/requirement-clarification.scenarios.md).
+
+### Starting and Inspecting Work
 
 Start with `$ecc-work` and a task or BA reference; use `$ecc-view` to inspect the
 current task/run. The user can choose auto, direct/no-agent, or team work for the

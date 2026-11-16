@@ -37,8 +37,10 @@ workspace file can be found. Never claim to have read an unavailable file.
 ## Planning Workflow
 
 1. Restate the objective, expected behavior, and acceptance criteria. Preserve the
-   user's scope boundaries. Label assumptions and open questions; ask immediately
-   only about gaps that materially affect the approach or scope.
+   user's scope boundaries. Compare relevant new/old documentation, requirements,
+   code/flows/consumers, contracts, tests and other available evidence. Apply the
+   business clarification rule below before fixing uncertain outcomes or checks;
+   select technical approaches autonomously within agreed scope and authority.
 2. Read project instructions and locate relevant code with `rg` or an equivalent
    tool. Find applicable naming, error handling, logging, data access, and test
    patterns. Cite paths and line numbers for examples to follow. State when no
@@ -56,6 +58,31 @@ workspace file can be found. Never claim to have read an unavailable file.
 6. Present enough detail to begin work, proportional to task size. If approval is
    still required before implementation, state that the next step is approval or
    revision and stop at the plan artifact.
+
+## Business Clarification and Technical Decisions
+
+Clarify unresolved requirements, desired output and business-flow contradictions
+across new/old documents, code/consumers, tests, contracts and other evidence.
+Inspect facts within authority but do not choose business intent by source label,
+recency or guess. Present the conflict, business alternatives and impact and ask
+before dependent work, even in direct mode or after generic approval. See
+[requirement clarification](../../references/requirement-clarification.md). Resolve
+the canonical `personal-ecc/references/requirement-clarification.md` from the shared
+ECC root, not from an installed-link parent directory.
+
+Keep the affected business outcome open and dependent work on hold; do not turn
+assumptions into acceptance criteria. Continue independent authorized work and
+reuse explicit answers without reapproval. A clearly requested change from old
+behavior does not itself create a new question.
+
+Select and justify technical approaches, shared/local boundaries, dependencies,
+refactoring and compatibility strategies autonomously to meet settled outcomes
+within scope. Different technical tradeoffs or disagreement between workers are
+not by themselves user questions. Investigate and choose; seek clarification only
+when the decision changes/depends on unresolved business intent, agreed output/
+scope or missing authority. Test implementation is an engineering choice; a test
+that conflicts with the intended business result needs intent clarification when
+that result cannot be established. Preserve execution and DB restrictions.
 
 ## Executable Task Handoff for Parallel Work
 

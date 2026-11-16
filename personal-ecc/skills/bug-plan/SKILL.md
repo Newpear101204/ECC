@@ -140,19 +140,21 @@ When the cause is in shared code, present these meaningful options:
   retain the defect or legacy behavior. A flag is one possible mechanism, not a
   required solution. Say when no local option can safely meet the requirement.
 
-Recommend an option with evidence, but leave the shared-versus-local decision to
-the user unless the conversation already authorizes that specific boundary. Ask
-whether to correct the shared function for the listed consumers or retain its
-behavior and use the viable local option. Silence is not selection of the local
-option. Declining the shared correction does not authorize an arbitrary workaround.
-If the user chooses a viable local correction, record the residual shared defect;
-if neither option is accepted or safe, mark the boundary unresolved.
+Choose the shared-versus-local technical correction with evidence when intended
+business results and authorized scope are clear. Explain consumers, tradeoffs and
+checks; do not require a separate user selection just because implementations
+differ. Ask when the alternatives require an unresolved business-rule decision,
+change agreed outcomes/scope or need authority not yet granted. Honor an explicit
+user-selected boundary without re-asking. If local isolation is selected, disclose
+the residual shared defect; do not select it merely to preserve defective outputs.
 
-Record the chosen boundary, approval evidence, covered consumers, intended behavior
-changes, and remaining exclusions in the plan handed to `bug-fix`. Approval to
-implement a plan that clearly selects and discloses the shared correction covers
-that boundary; do not request the same approval again. Approval of a local plan
-does not authorize silently switching to a shared correction, or vice versa.
+Record the chosen boundary, its rationale/authority, covered consumers, intended behavior
+changes, and remaining exclusions in the plan handed to `bug-fix`. Do not request
+duplicate approval. A technical approach may be refined autonomously if agreed
+business results, work scope and authority remain unchanged; explain and update
+the plan when consequential. Honor an explicit user constraint such as local-only;
+do not reinterpret engineering autonomy as permission to change that constraint
+or silently alter the agreed business effects.
 
 Avoid hiding failures with broad exception handling, weakening validation or
 authorization, dropping records, or substituting arbitrary defaults unless the
@@ -214,7 +216,7 @@ Use a compact structure proportional to the fix:
 
 1. Bug reference, diagnosis/confidence, objective, acceptance criteria, and scope.
 2. Correction point and rationale; for shared defects, direct/local options,
-   recommendation, and the user's selected boundary or explicit pending decision.
+   selected technical boundary/rationale, and any unresolved business decision.
 3. Impact table for the original feature and other consumers, with evidence and limits.
 4. Ordered tasks, files, dependencies, and completion checks.
 5. Regression validation mapped to expected behavior and identified risks.

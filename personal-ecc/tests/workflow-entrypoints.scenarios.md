@@ -24,3 +24,17 @@ checks are covered separately by executable tests.
 | Bug diagnosis-only request | Preserve diagnosis stop; do not route to automatic fix/review/publication |
 | User asks `/view` without a registered slash command | Explain `$ecc-view` or natural request; do not claim a nonexistent slash alias |
 | Coordinator session ends | Preserve state; no claim that native agents form a continuing background dispatcher |
+| BA specifies one selected-task import; supplied design shows two task inputs | Cite both facts and ask which interaction is intended; do not implement one silently |
+| Small/direct task has the same BA/design conflict | Apply clarification gate even without a formal plan or worker |
+| Worker finds conflict after generic approval to implement | Escalate to main AI; hold dependent work; main asks user; unrelated authorized work may continue |
+| User explicitly says BA governs this discrepancy | Follow established precedence and record it; do not ask the same decision again |
+| Source link inaccessible and desired behavior depends on it | Disclose missing access; ask instead of claiming it was inspected or inventing its content |
+| User clearly approved a surfaced specific conflict resolution | Use that decision; generic no-repeat-approval rule still applies |
+| New BA deliberately changes old code behavior | Implement the approved change; do not manufacture a conflict merely from old code |
+| Clear behavior, minor naming/spacing choice follows repo convention | Resolve locally; no product-clarification stop needed |
+| New requirements omit a legacy rule still used by old consumers | Inspect facts, surface the gap and ask whether to preserve/change it; do not silently select either |
+| Different technical alternatives satisfy the settled business result within scope | AI investigates, chooses and explains engineering tradeoffs without asking user to pick |
+| Test, contract and code disagree and intended business semantics remain unclear | Ask about the business result; do not force green by guessing |
+| Old test conflicts with an explicit approved contract and business intent is clear | Correct the technical test/implementation based on evidence without re-asking intent |
+| Unknown fact can be resolved by authorized source inspection | Investigate it; ask for user decisions rather than outsourcing source analysis |
+| Generic skill says avoid unnecessary questions | Unresolved business requirements still require questions; engineering decisions remain AI-owned |
