@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { assert, text, id, strings, safePath, normalizeTask, checkGraph, validateState } = require('./model-validation');
+const { createObservation, applyObservation, projectObservation } = require('./observation-model');
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function now() { return new Date().toISOString(); }
@@ -36,7 +37,10 @@ function event(state, command) {
 
 function createRun(plan) {
   assert(plan && plan.schemaVersion === 1, 'Invalid plan schema version');
-  assert(Array.isArray(plan.tasks) && plan.tasks.length > 0 && plan.tasks.length <= 256, 'Invalid plan tasks');
+  assert(plan.observationOnly === undefined || typeof plan.observationOnly === 'boolean', 'Invalid observation-only flag');
+  assert(Array.isArray(plan.tasks) && plan.tasks.length <= 256 &&
+    (plan.observationOnly ? plan.tasks.length === 0 : plan.tasks.length > 0), 'Invalid plan tasks');
+  assert(!plan.observationOnly || !plan.approved, 'Observation-only intake cannot grant execution approval');
   assert(plan.approved === undefined || typeof plan.approved === 'boolean', 'Invalid plan approval');
   const tasks = plan.tasks.map(raw => ({ ...normalizeTask(raw), status: 'pending',
     attempts: [], currentAttemptId: null, output: null, review: null, integration: null }));
@@ -45,9 +49,13 @@ function createRun(plan) {
     baseRef: text(plan.baseRef, 'baseRef'), approved: plan.approved ?? false,
     // The coordinator supplies a host-aware budget; omitted legacy budgets use
     // the finite task count, never a fixed concurrency preference.
-    maxWorkers: plan.maxWorkers === undefined ? tasks.length : plan.maxWorkers,
+    maxWorkers: plan.maxWorkers === undefined ? Math.max(1, tasks.length) : plan.maxWorkers,
     paused: false, tasks, events: [], seq: 0, droppedEvents: 0,
     createdAt: now(), updatedAt: now() };
+  if (plan.observationOnly) {
+    state.observationOnly = true;
+    state.observability = createObservation(state.createdAt);
+  }
   validateState(state);
   event(state, { action: 'created' });
   return refresh(state);
@@ -192,9 +200,12 @@ function apply(original, command) {
   validateState(original);
   assert(command && typeof command.action === 'string', 'Invalid command');
   const state = refresh(clone(original));
-  if (command.action === 'pause') state.paused = true;
+  if (command.action === 'observe') {
+    state.observability = applyObservation(state.observability || createObservation(), command.event);
+  } else if (command.action === 'pause') state.paused = true;
   else if (command.action === 'resume') state.paused = false;
   else if (command.action === 'approve') {
+    assert(!state.observationOnly, 'Observation-only recording does not grant execution approval');
     assert(!state.approved, 'Run is already approved');
     state.approval = { approver: text(command.approver, 'approver', 200),
       evidence: text(command.evidence, 'approval evidence'), at: now() };
@@ -210,6 +221,7 @@ function apply(original, command) {
 function snapshot(original) {
   validateState(original);
   const state = refresh(clone(original));
+  if (state.observability) state.observability = projectObservation(state.observability);
   state.tasks = state.tasks.map(task => ({ ...task, blockedReasons: [
     ...dependencies(state, task),
     ...(!state.approved && task.status === 'ready' ? ['Run requires approval'] : []),

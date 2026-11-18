@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { validateObservation } = require('./observation-validation');
 
 const STATUSES = new Set(['pending', 'ready', 'running', 'needs_review', 'accepted',
   'integrated', 'changes_requested', 'failed', 'cancelled']);
@@ -136,7 +137,15 @@ function validateState(state) {
   text(state.baseRef, 'baseRef');
   assert(typeof state.approved === 'boolean' && typeof state.paused === 'boolean', 'Invalid state approval/pause');
   assert(Number.isSafeInteger(state.maxWorkers) && state.maxWorkers >= 1, 'Invalid maxWorkers');
-  assert(Array.isArray(state.tasks) && state.tasks.length > 0 && state.tasks.length <= 256, 'Invalid state tasks');
+  assert(state.observationOnly === undefined || typeof state.observationOnly === 'boolean', 'Invalid observation-only flag');
+  assert(Array.isArray(state.tasks) && state.tasks.length <= 256 &&
+    (state.observationOnly ? state.tasks.length === 0 : state.tasks.length > 0), 'Invalid state tasks');
+  if (state.observationOnly) assert(!state.approved && state.observability, 'Observation-only state cannot grant execution approval');
+  if (state.observability) {
+    validateObservation(state.observability);
+    assert(state.observability.items.every(item => !item.taskId || state.tasks.some(task => task.id === item.taskId)),
+      'Unknown linked observation execution task');
+  }
   state.tasks.forEach(task => {
     normalizeTask(task);
     assert(STATUSES.has(task.status), 'Invalid task state status');

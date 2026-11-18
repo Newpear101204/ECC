@@ -49,6 +49,11 @@ workspace file can be found. Never claim to have read an unavailable file.
 3. Break work into dependency-ordered tasks. For each, identify the concrete
    change, expected files/modules, existing patterns to follow, and completion
    checks. Distinguish verified files from proposed new paths.
+   Separate phase order from parallelism within a phase. Identify independent
+   coding/review work even when planning itself is sequential. State prerequisites,
+   ownership, proposed mode per relevant phase and who does main-AI work. Do not
+   imply that proposed workers have already been dispatched. Before execution,
+   reassess with actual inputs/slots rather than freezing the plan's initial mode.
 4. Identify dependencies, material risks, mitigations, and low/medium/high
    complexity. Avoid precise time estimates without supporting evidence.
 5. Select validation appropriate to the change and project rules. Include behavior
@@ -86,6 +91,17 @@ that result cannot be established. Preserve execution and DB restrictions.
 
 ## Executable Task Handoff for Parallel Work
 
+For substantial multi-stage tasks, follow the phase reassessment and reporting
+contract in `personal-ecc/references/phase-coordination.md` from the shared ECC root.
+Keep plan versions and main/agent task ownership in the existing plan/handoff.
+The browser dashboard is deferred; do not create an observation-only ledger or
+start a server to display planning. This does not change planning, parallel-work
+assessment, clarification or implementation-approval boundaries.
+Phase order is not a blanket requirement to run every task or every review serially.
+Review independent parts against pinned inputs and let a ready part progress when
+its own gates permit, without waiting for unrelated work solely for a batch boundary.
+Integration into the same target and final cross-feature reconciliation stay ordered.
+
 When independent work warrants orchestration, use
 `skills/team-agent-orchestration/SKILL.md` from the shared ECC checkout. Keep an
 ordinary inline plan for simpler work instead of generating a run file by default.
@@ -115,6 +131,8 @@ execution and bug-stage boundaries. New run tasks default to database `none`.
 JSON state is distinct from application databases and existing ECC SQLite stores.
 Do not start workers, create worktrees, commit, deploy, or perform DB operations
 merely because their steps appear in the plan.
+Proposed workers must not be labelled active before actual dispatch. Updating
+the plan or managed task state never grants execution or publication rights.
 
 ## Database Context for Feature Plans
 
@@ -188,6 +206,10 @@ Complexity: {low / medium / high}
 
 ## Implementation Tasks
 1. {Change, files/modules, dependencies, validation}
+
+## Phase Execution (for substantial multi-stage work)
+{Phase, task group, prerequisites, proposed direct/sequential/parallel mode and
+reason, main-AI owner or proposed worker; reassess at execution, not a live assignment}
 
 ## Validation
 {Check commands and expected results}

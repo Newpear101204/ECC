@@ -18,6 +18,37 @@ test('small and ordered work avoids orchestration without pretending risk means 
   assert.throws(() => classifyWork({ mode: 'parallel', independentStreams: 1 }), /independent/i);
 });
 
+test('each phase is assessed independently instead of inheriting the planning mode', () => {
+  const assessments = [
+    { phase: 'planning', independentStreams: 1 },
+    { phase: 'implementation', independentStreams: 3 },
+    { phase: 'code-review', independentStreams: 2 },
+    { phase: 'integration', independentStreams: 1 },
+  ];
+  const results = assessments.map(assessment => classifyWork(Object.freeze(assessment)));
+  assert.deepEqual(results.map(result => result.mode), ['sequential', 'parallel', 'parallel', 'sequential']);
+  assert.deepEqual(results.map(result => result.phase), assessments.map(assessment => assessment.phase));
+  assert.deepEqual(Object.keys(classifyWork({ independentStreams: 1 })).sort(), ['mode', 'reason']);
+});
+
+test('phase labels accept known stages and reject invalid explicit values', () => {
+  for (const phase of ['discovery', 'planning', 'plan-review', 'implementation', 'code-review', 'integration', 'verification']) {
+    assert.equal(classifyWork({ phase, small: true }).phase, phase);
+  }
+  for (const phase of ['', null, 1, 'whole-project', 'coding']) {
+    assert.throws(() => classifyWork({ phase, independentStreams: 2 }), /phase/i);
+  }
+});
+
+test('CLI classify preserves the assessed phase without creating a run', async () => {
+  const output = [];
+  const assessment = { phase: 'implementation', independentStreams: 2 };
+  assert.equal(await main(['classify', '--input', JSON.stringify(assessment)], { out: line => output.push(line) }), 0);
+  const result = JSON.parse(output[0]);
+  assert.equal(result.phase, 'implementation');
+  assert.equal(result.mode, 'parallel');
+});
+
 test('CLI rejects unknown flags and requires explicit JSON state path', () => {
   assert.throws(() => parseArgs(['status', '--other']), /Unknown/);
   assert.throws(() => parseArgs(['status']), /state/);

@@ -1,6 +1,6 @@
 # Hướng dẫn bắt đầu tính năng mới với ECC
 
-Phiên bản hướng dẫn: 12/11/2026. Dành cho người dùng Codex đang dùng checkout ECC này.
+Phiên bản hướng dẫn: 17/11/2026. Dành cho người dùng Codex đang dùng checkout ECC này.
 
 Đọc cùng [Báo cáo cập nhật](ORCHESTRATION-REPORT.vi.md) nếu cần biết phạm vi kỹ thuật.
 Các lệnh dưới đây là hướng dẫn, chưa được chạy vào project nghiệp vụ của bạn.
@@ -12,14 +12,15 @@ chương trình độc lập tự tiếp tục phát triển khi phiên AI chín
 được làm song song dưới sự điều phối đó. Khi dừng có kiểm soát, AI ngừng giao việc,
 yêu cầu worker dừng và lưu trạng thái; nếu mất kết nối đột ngột thì phải xác minh
 worker còn chạy hay không khi tiếp tục, không mặc định chúng đã tự tắt.
-Dashboard chỉ đọc có thể còn hiển thị; nó không được tự thực hiện công việc.
+Trang dashboard được tạm bỏ khỏi quy trình theo yêu cầu mới; không tự chạy server
+hoặc tạo sổ sự kiện chỉ để hiển thị. Cơ chế AI điều phối công việc giữ nguyên.
 
 Trong phiên Codex mới, mở đúng project nghiệp vụ rồi gõ `$` để chọn:
 
 | Bạn cần làm gì | Cách gọi | AI làm gì |
 |---|---|---|
 | Nhận một tính năng/công việc mới | `$ecc-work` và yêu cầu/tài liệu BA | Chọn quy trình vừa đủ, giữ phạm vi và tổ chức thực hiện |
-| Xem tiến độ công việc đang làm | `$ecc-view` | Xác định run đang nói tới, đọc trạng thái và tóm tắt; đưa đường dẫn dashboard nếu có |
+| Xem tiến độ công việc đang làm | `$ecc-view` | Bảng tiến độ ngắn trong hội thoại từ plan, evidence hoặc execution run đã có |
 | Chỉ lập kế hoạch | `$ecc-plan` và yêu cầu | Khảo sát, trả plan rồi dừng theo phạm vi đã giao |
 
 Ví dụ thông thường:
@@ -38,6 +39,27 @@ AI kế thừa kế hoạch, quyền đã cấp và quy tắc thường trực; 
 bootstrap, số worker hay chính sách DB. Nếu ngay từ đầu bạn đã giao triển khai,
 skill không tự chèn thêm một vòng xin phép chỉ vì tên quy trình có bước lập plan.
 
+### Theo dõi tiến độ trong hội thoại
+
+Dashboard và việc ghi observation event chỉ để hiển thị đã được tạm bỏ. AI không
+tự bật trang hoặc tạo run riêng cho theo dõi. Mã thử nghiệm và dữ liệu cũ được giữ
+để nghiên cứu sau; muốn bật lại cần yêu cầu rõ việc đó.
+
+Dùng câu ngắn trong phiên đang làm:
+
+```text
+$ecc-view
+```
+
+AI trả bảng ngắn: task, người nhận, bằng chứng, blocker và bước tiếp theo. Bảng là
+snapshot tại thời điểm trả lời, không tự cập nhật trực tiếp. Không cần PowerShell.
+Trạng thái managed run cần cho điều phối, review và khôi phục vẫn được giữ; không
+ghi thêm một bản sao chỉ để phục vụ dashboard. Kế hoạch, câu hỏi nghiệp vụ, chia
+việc theo từng giai đoạn, refill worker và review đầu ra không thay đổi.
+
+Skill đang liên kết với checkout này không cần cài lại. Phiên Codex mới sẽ nạp chỉ
+dẫn mới; trong hội thoại hiện tại, yêu cầu mới của bạn có hiệu lực ngay.
+
 Bạn có thể chủ động đổi cách làm cho từng nhiệm vụ:
 
 | Lựa chọn | Câu ngắn có thể dùng | Hành vi |
@@ -55,6 +77,41 @@ Không có giới hạn mặc định cố định ba worker. AI chọn ngân s�
 task độc lập, slot công cụ thật sự khả dụng và tải máy. Có thể dùng mười worker
 khi hữu ích và môi trường hỗ trợ; nếu thiếu slot, xếp hàng rồi giao tiếp khi trống.
 Không hứa số worker vượt giới hạn host và không tạo agent chỉ để lấp đầy slot.
+
+### “Tuần tự” đang áp dụng cho phần nào?
+
+AI phải nói rõ giai đoạn và công việc, không chọn “tuần tự” một lần rồi áp dụng
+cho toàn bộ tính năng. Khi chuyển giai đoạn hoặc có đầu ra làm hết phụ thuộc,
+AI đánh giá lại khả năng chia việc mà bạn không cần nhắc riêng.
+
+| Giai đoạn | Cách tổ chức có thể phù hợp |
+|---|---|
+| Khảo sát | Các module/nguồn/test độc lập có thể khảo sát song song |
+| Lập kế hoạch | AI chính tổng hợp; có thể chia phân tích độc lập khi hữu ích |
+| Review kế hoạch | Các góc kiểm tra độc lập có thể song song trên cùng phiên bản |
+| Code | Task đủ đầu vào, scope/worktree độc lập có thể chạy song song |
+| Review code | Review phần đã có kết quả hoặc các góc review độc lập trên revision cố định |
+| Tích hợp | Tuần tự khi ghi cùng target; không chặn việc độc lập ở nơi khác |
+| Kiểm chứng | Các nhóm check độc lập có thể song song nếu đã được phép và đủ tài nguyên |
+
+Đây là khả năng tổ chức, không tự cấp quyền chạy test, mở formal bug-review hay
+vượt ranh giới giai đoạn bạn đã giao. Nếu bạn yêu cầu không chia agent, AI vẫn giữ
+yêu cầu đó. Có plan chưa đủ chứng minh code độc lập: phải kiểm tra contract, file
+chung và đầu vào. Review một phần không phải đợi mọi phần khác hoàn tất nếu không
+phụ thuộc; kết luận cuối vẫn cần đối chiếu tương tác của bản đã tích hợp.
+
+Ví dụ cập nhật đúng: “Đang tổng hợp plan tuần tự vì contract chưa chốt. Sau đó
+UI A và UI B có thể code song song; review từng phần bắt đầu khi phần đó có kết
+quả, còn tích hợp vào cùng branch sẽ tuần tự.” Nếu không chia được, AI phải nêu
+lý do cụ thể như chung file, thiếu đầu vào, thiếu slot hoặc tải máy.
+
+Với tính năng nhiều bước, AI giữ bảng ngắn trong plan/handoff gồm giai đoạn/task,
+phụ thuộc, người làm (kể cả AI chính), bằng chứng và bước tiếp theo. Phân biệt:
+**dự kiến giao → đã chuẩn bị packet → đã giao agent thật → đã nhận kết quả**.
+Đó là các mức bằng chứng. Task executor `running` chỉ do claim chưa chứng minh
+có agent đang chạy. AI nói rõ dữ liệu từ execution receipts hay hội thoại và giữ
+reference thực tế, không hứa tự thu mọi hoạt động native agent. Bạn không cần nhập
+thêm lệnh để được AI phân tích, chia việc và ghi nhận đúng.
 
 Bạn không phải tự tạo JSON, copy hash hay nhập lệnh PowerShell. **Phần 4–9 là
 phụ lục vận hành tùy chọn dành cho AI/người muốn kiểm tra kỹ thuật**, không phải
@@ -81,8 +138,8 @@ AI không hỏi lại quyền đã được cấp rõ, nhưng phải giữ các 
 ### Token và tài nguyên máy
 
 Nhiều worker có thể giảm thời gian nhưng tăng token do mỗi agent cần ngữ cảnh và
-trao đổi kết quả. Worktree dùng dung lượng đĩa; dashboard dùng một tiến trình Node
-và trình duyệt. Build/test/dev server chạy đồng thời mới thường là phần có thể
+trao đổi kết quả. Worktree dùng dung lượng đĩa. Dashboard và sổ hiển thị riêng đã
+được tạm bỏ. Build/test/dev server chạy đồng thời thường là phần có thể
 gây tải CPU/RAM/I/O đáng kể. AI phải hạn chế các job nặng theo điều kiện thực tế,
 không tự đưa số RAM hoặc phần trăm tiết kiệm chưa đo. Làm trực tiếp cho việc nhỏ
 giúp tránh chi phí điều phối không cần thiết.
@@ -187,11 +244,9 @@ $ecc-view
 ```
 
 Bảng trong câu trả lời là snapshot tại lúc trả lời, không tự thay đổi sau đó.
-Dashboard trình duyệt tự đọc lại state khoảng hai giây; chỉ phản ánh những sự kiện
-AI/công cụ đã ghi, chưa tự thu mọi hoạt động native agent. Refresh không gọi model
-mỗi hai giây và không phát sinh token mô hình cho mỗi lần tải trang. `/view` chưa
-được cài thành slash command; dùng `$ecc-view` hoặc nói “Xem tiến độ”. Nếu có nhiều
-run phù hợp mà chưa rõ bạn muốn run nào, AI hỏi chọn thay vì tự mở nhầm.
+Không khởi chạy dashboard hoặc ghi event riêng để hiển thị. /view chưa được cài
+thành slash command; dùng $ecc-view hoặc nói “Xem tiến độ”. Nếu có nhiều run phù
+hợp mà chưa rõ bạn muốn run nào, AI hỏi chọn thay vì suy đoán.
 
 ### Bước 3: Chốt contract trước khi cho code song song
 
@@ -357,7 +412,7 @@ Nếu muốn quản lý cả khảo sát, có thể tạo run khảo sát riêng
 findings đã nghiệm thu. CLI hiện không có command sửa/append plan task sau init;
 không chỉnh tay run state để đổi scope hoặc dependency.
 
-## 6. Khởi tạo, ghi approval và mở dashboard
+## 6. Khởi tạo, ghi approval và đọc trạng thái
 
 ### 6.1. Khởi tạo
 
@@ -382,30 +437,17 @@ node $Orchestrator approve --state $RunFile --by 'project-owner' --evidence 'Own
 Đây là ghi lại quyền đã được cấp, không phải AI tự phê duyệt thay bạn. Không dùng
 chuỗi ví dụ làm bằng chứng nếu bạn chưa thực sự chấp thuận nội dung tương ứng.
 
-### 6.3. Mở dashboard trong terminal thứ hai
+### 6.3. Đọc trạng thái khi cần
 
-Các biến của terminal thứ nhất không tự tồn tại trong terminal thứ hai. Điền lại
-đường dẫn hoặc dùng trực tiếp:
-
-```powershell
-Set-Location 'C:/ECC'
-node scripts/orchestrate.js serve --state 'C:/ecc-runs/exam-registration/run.json' --port 8765
-```
-
-Mở URL mà terminal in ra, thường là `http://127.0.0.1:8765`. Giữ terminal này hoạt
-động để phục vụ trang; `Ctrl+C` dừng dashboard, không dừng các agent đang làm việc.
-
-Cách tương đương qua control pane:
+Dashboard đã được tạm bỏ. Không mở terminal thứ hai hay chạy server. Trong Codex,
+gọi $ecc-view để nhận snapshot trong hội thoại. Nếu cần xem kỹ managed run đã có,
+AI có thể đọc trạng thái bằng lệnh chỉ đọc sau:
 
 ```powershell
-node scripts/control-pane.js --orchestration 'C:/ecc-runs/exam-registration/run.json' --no-open
+node $Orchestrator status --state $RunFile
 ```
 
-**Phải có `--orchestration`** nếu dùng control pane trong nhiệm vụ không DB. Bỏ
-flag này sẽ đi vào chế độ control pane cũ dùng các kho DB ECC, ngoài phạm vi này.
-
-Dashboard tự refresh khoảng hai giây, chỉ đọc file JSON. Nó không cung cấp nút
-pause/retry/review và không tự thu toàn bộ log của native agent.
+Không khởi chạy control pane cũ dùng DB để thay thế dashboard.
 
 ## 7. Giao worker và nhận kết quả
 
@@ -579,7 +621,7 @@ node $Orchestrator status --state $RunFile
 node $Orchestrator status --state $RunFile --json
 ```
 
-Đối chiếu dashboard với cập nhật của AI. Native agent và JSON run không tự đồng
+Đối chiếu trạng thái execution run với cập nhật của AI. Native agent và JSON run không tự đồng
 bộ mọi sự kiện; AI chính phải ghi trạng thái và evidence phù hợp.
 
 Bạn có thể dùng prompt:
@@ -625,7 +667,7 @@ $Heartbeat = @{ action = 'heartbeat'; taskId = 'BE-01'; attemptId = 'BE-01-1' } 
 node $Orchestrator dispatch --state $RunFile --command $Heartbeat
 ```
 
-Không gửi heartbeat chỉ để làm dashboard trông như đang tiến triển. Heartbeat
+Không gửi heartbeat chỉ để làm báo cáo trông như đang tiến triển. Heartbeat
 không kèm phần trăm hoàn thành và không thay thế báo cáo kết quả cụ thể.
 
 Khi đã quyết định hủy một task chưa accepted/integrated:
@@ -656,8 +698,8 @@ $Failure = @{ action = 'fail'; taskId = 'BE-01'; attemptId = 'BE-01-1'; error = 
 node $Orchestrator dispatch --state $RunFile --command $Failure
 ```
 
-Lịch sử event giữ tối đa 1.000 transition và số event đã bỏ; dashboard hiển thị
-100 event gần nhất. Không coi nó là kho audit toàn bộ log hoặc mọi thao tác agent.
+Lịch sử execution event giữ tối đa 1.000 transition và số event đã bỏ. Không coi
+nó là kho audit toàn bộ log hoặc mọi thao tác agent; không cần dashboard để lưu.
 
 ## 10. Kiểm chứng tính năng và bàn giao beta
 
@@ -666,7 +708,7 @@ Lịch sử event giữ tối đa 1.000 transition và số event đã bỏ; das
 | Giai đoạn | Skill/vai trò | Kết quả phải có |
 |---|---|---|
 | Nhận BA, khảo sát, lập plan | `ecc-work`; `ecc-plan` khi chỉ cần plan; explorer khi phù hợp | AC, code paths, contract, task graph, quyền hạn |
-| Xem tiến độ | `ecc-view` | Snapshot task, worker, blocker, evidence và URL dashboard nếu có |
+| Xem tiến độ | `ecc-view` | Snapshot task, worker, blocker và evidence ngay trong hội thoại |
 | Điều phối công việc độc lập | `team-agent-orchestration` | Packet, ownership, worktree, trạng thái và evidence |
 | Viết code/test | `tdd-workflow`, kiến thức backend/frontend của stack | Thay đổi theo AC, test phù hợp; RED/GREEN chỉ khi chạy thật |
 | Review | Reviewer được phiên hỗ trợ | Findings và quyết định theo đúng revision |
@@ -740,7 +782,7 @@ plan/fix/review theo đúng yêu cầu và dừng ở ranh giới từng giai đ
 |---|---|
 | AI nói đã tạo worker nhưng không có packet/worktree | Hỏi task/attempt, công cụ agent thật và vị trí checkout |
 | Task dependent chạy khi upstream chưa integrated | Yêu cầu dừng giao mới và đối chiếu gate/baseline |
-| Dashboard báo running nhưng agent chưa được giao | Yêu cầu đối chiếu claim với agent thật, không coi claim là tiến độ |
+| Run báo running nhưng agent chưa được giao | Yêu cầu đối chiếu claim với agent thật, không coi claim là tiến độ |
 | Worker nói test pass nhưng không có command/evidence | Yêu cầu evidence hoặc giữ not-run |
 | Đề nghị dùng row beta để quyết định luồng | Quay về BA và code; chỉ đọc ngữ cảnh khi thật cần và được phép |
 | Tự dùng `run --execute` hoặc testHarness để chạy thật | Dừng đường chạy đó; chỉ dùng managed manual handoff được phép |

@@ -48,6 +48,8 @@ function createOrchestrationDashboard(options = {}) {
   if (!LOOPBACK_BINDINGS.has(host)) throw new Error('Dashboard binding must be loopback.');
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid dashboard port.');
   if (readOnly !== true) throw new Error('Dashboard is read-only; use the orchestration CLI for commands.');
+  if (options.instanceId !== undefined && (typeof options.instanceId !== 'string' ||
+      !/^[a-f0-9-]{36}$/.test(options.instanceId))) throw new Error('Invalid dashboard instance.');
   if (!options.readSnapshot && (typeof filePath !== 'string' || !filePath.trim())) {
     throw new Error('An explicit orchestration JSON file is required.');
   }
@@ -76,7 +78,8 @@ function createOrchestrationDashboard(options = {}) {
     }
     if (route === '/') return send(res, 200, renderDashboardHtml(), 'text/html; charset=utf-8');
     if (route === '/assets/dashboard.js') return send(res, 200, dashboardScript(), 'text/javascript; charset=utf-8');
-    if (route === '/health') return send(res, 200, { status: 'ok', readOnly: true, storage: 'explicit-json' });
+    if (route === '/health') return send(res, 200, { status: 'ok', readOnly: true, storage: 'explicit-json',
+      ...(options.instanceId ? { instanceId: options.instanceId, pid: process.pid } : {}) });
     if (route !== '/api/orchestration') return send(res, 404, { error: 'Not found' });
     try {
       const value = await readSnapshot();

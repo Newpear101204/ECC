@@ -90,7 +90,9 @@ class Element {
 }
 
 function browser(fetch) {
-  const ids = Object.fromEntries(['connection', 'run-summary', 'task-list', 'event-list'].map(id => [id, new Element('div')]));
+  const ids = Object.fromEntries(['connection', 'run-summary', 'task-list', 'event-list',
+    'observation-overview', 'phase-list', 'observation-list', 'agent-list', 'change-list',
+    'observation-events'].map(id => [id, new Element('div')]));
   const context = {
     document: { getElementById: id => ids[id], createElement: tag => new Element(tag) },
     fetch, setTimeout: () => 0, clearTimeout: () => {},
@@ -112,9 +114,154 @@ test('browser displays untrusted fields as text, task evidence, and event timeli
     assert.ok(tasks.includes(expected), expected);
   }
   assert.match(textOf(ids['event-list']), /submit/);
-  assert.match(ids.connection.textContent, /Live/);
+  assert.match(ids.connection.textContent, /Connected/);
   assert.doesNotMatch(dashboardScript(), /innerHTML|insertAdjacentHTML|document\.write/);
   assert.doesNotMatch(renderDashboardHtml(), /<img|https?:\/\//);
+});
+
+function observedRun() {
+  const value = run();
+  value.observationOnly = true;
+  value.tasks = [];
+  value.observability = {
+    schemaVersion: 1,
+    plan: { title: 'Registration UI', reference: 'plans/registration.md', version: 'v2',
+      summary: 'Approved interaction', at: '2026-11-17T10:00:00Z' },
+    session: { status: 'active', updatedAt: '2026-11-17T10:00:00Z', evidence: 'Main AI session record' },
+    lastRecordedAt: '2026-11-17T10:02:00Z',
+    items: [
+      { id: 'PLAN', title: 'Contract consolidation', phase: 'planning', owner: 'main', status: 'working',
+        dependsOn: [], inputs: ['BA-v2'], attempts: [{ id: 'PLAN-1', workerId: 'main-ai', dispatch: null }] },
+      { id: 'UI-A', title: '<script>untrusted()</script>', phase: 'implementation', owner: 'agent', status: 'prepared',
+        currentAttemptId: 'UI-A-1', dependsOn: ['PLAN'], scope: ['src/a'], attempts: [{ id: 'UI-A-1',
+          workerId: 'worker-a', worktree: '/isolated/a', dispatch: null }],
+        wait: { waitingFor: 'dependency', reason: 'Contract decision pending', evidence: 'Q-01' } },
+      { id: 'UI-B', title: 'Form', phase: 'implementation', owner: 'agent', status: 'result_received',
+        currentAttemptId: 'UI-B-1', dependsOn: [], attempts: [{ id: 'UI-B-1', workerId: 'worker-b',
+          dispatch: { provider: 'native', tool: 'spawn_agent', agentRef: '/root/form-worker', reference: 'call-123',
+            evidence: 'Tool result recorded', at: '2026-11-17T10:01:00Z' } }],
+        output: { revision: 'pinned-revision', outputHash: 'output-hash', summary: 'Submitted form', checks: [
+          { name: 'component', status: 'not-run', evidence: 'Execution not authorized' }] },
+        review: { verdict: 'changes_requested', evidence: 'Missing empty state' } }
+    ],
+    decisions: [{ phase: 'implementation', mode: 'parallel', reason: 'Disjoint ownership after contract',
+      ready: ['UI-B'], blocked: [{ itemId: 'UI-A', reason: 'Needs contract answer' }], evidence: 'Code survey' }],
+    changes: [{ type: 'work-revise', itemId: 'UI-B', reason: 'Added empty-state criterion', evidence: 'Reviewer finding' }],
+    planHistory: [{ title: 'Registration UI', version: 'v1', reference: 'plans/registration-v1.md' }],
+    events: [{ seq: 4, type: 'dispatch', itemId: 'UI-B', evidence: 'call-123', details: { agentRef: '/root/form-worker' } }],
+    summary: { total: 3, counts: { prepared: 1, working: 1, result_received: 1 },
+      preparedAwaitingDispatch: 1, dispatchRecorded: 1, mainWorking: 1, waiting: 0,
+      readyItemIds: ['UI-B'], warnings: ['Dispatch references do not prove process liveness'] }
+  };
+  return value;
+}
+
+test('observation page exposes plan, phase rationale, main work and dispatch evidence separately', async () => {
+  const { ids } = browser(async () => ({ ok: true, json: async () => observedRun() }));
+  await settle();
+  const overview = textOf(ids['observation-overview']);
+  for (const expected of ['Registration UI', 'plans/registration.md', 'v2', 'Main AI session record',
+    '2026-11-17T10:02:00Z', 'coordinator', 'liveness']) assert.ok(overview.includes(expected), expected);
+  const phase = textOf(ids['phase-list']);
+  for (const expected of ['implementation', 'parallel', 'Disjoint ownership', 'Needs contract answer']) {
+    assert.ok(phase.includes(expected), expected);
+  }
+  const work = textOf(ids['observation-list']);
+  for (const expected of ['Main AI', 'Contract consolidation', 'Prepared', 'awaiting dispatch',
+    '<script>untrusted()</script>', 'Contract decision pending', 'pinned-revision', 'not-run', 'Missing empty state']) {
+    assert.ok(work.includes(expected), expected);
+  }
+  const agents = textOf(ids['agent-list']);
+  for (const expected of ['worker-a', 'No dispatch receipt', '/root/form-worker', 'spawn_agent', 'call-123']) {
+    assert.ok(agents.includes(expected), expected);
+  }
+  assert.match(textOf(ids['change-list']), /Added empty-state criterion/);
+  assert.match(textOf(ids['observation-events']), /call-123/);
+  assert.doesNotMatch(dashboardScript(), /innerHTML|insertAdjacentHTML|document\.write/);
+  assert.doesNotMatch(ids['run-summary'].textContent, /Running:|live agents|%/i);
+});
+
+test('legacy claimed attempts are not represented as verified live agents', async () => {
+  const snapshot = run();
+  snapshot.tasks[0].status = 'running';
+  const { ids } = browser(async () => ({ ok: true, json: async () => snapshot }));
+  await settle();
+  assert.match(textOf(ids['task-list']), /Claimed.*not.*live/i);
+  assert.match(textOf(ids['observation-overview']), /No observation ledger/);
+  assert.doesNotMatch(ids['run-summary'].textContent, /Running:/);
+});
+
+test('retry has no current assignment while old dispatch remains explicitly historical', async () => {
+  const snapshot = observedRun();
+  const task = run().tasks[0];
+  task.status = 'pending';
+  task.currentAttemptId = null;
+  task.attempts[0].status = 'failed';
+  snapshot.tasks = [task];
+  const item = snapshot.observability.items[2];
+  item.status = 'planned';
+  item.currentAttemptId = null;
+  item.attempts[0].status = 'failed';
+  snapshot.observability.items = [item];
+  const { ids } = browser(async () => ({ ok: true, json: async () => snapshot }));
+  await settle();
+  const currentMetadata = textOf(ids['task-list'].children[0].children[2]);
+  assert.match(currentMetadata, /Worker: Unassigned/);
+  assert.match(currentMetadata, /Attempt: None/);
+  assert.match(currentMetadata, /Worktree: None/);
+  assert.doesNotMatch(currentMetadata, /worker-a|T1-1|safe\/worktree/);
+  const attempts = textOf(ids['agent-list']);
+  assert.match(attempts, /Historical attempt/);
+  assert.match(attempts, /Attempt status: failed/);
+  assert.match(attempts, /call-123/);
+  assert.doesNotMatch(attempts, /Attempt role: Current/);
+  assert.match(textOf(ids['observation-list']), /Current attempt: None/);
+});
+
+test('recorded progress labels do not equate a result, acceptance or integration with live activity', async () => {
+  const snapshot = observedRun();
+  snapshot.observability.items = ['planned', 'dispatched', 'accepted', 'integrated', 'waiting'].map((status, index) => ({
+    id: 'STATE-' + index, title: status, phase: 'implementation', owner: 'agent', status, dependsOn: [], attempts: []
+  }));
+  const { ids } = browser(async () => ({ ok: true, json: async () => snapshot }));
+  await settle();
+  const work = textOf(ids['observation-list']);
+  for (const label of ['Proposed / not started', 'Dispatch recorded', 'Acceptance recorded', 'Integration recorded', 'Waiting']) {
+    assert.ok(work.includes(label), label);
+  }
+  assert.doesNotMatch(work, /\d+%|ETA|live worker/i);
+});
+
+test('invalid observation envelopes clear all work rather than presenting partial healthy data', async () => {
+  const snapshot = observedRun();
+  snapshot.observability.items[0].owner = 'unknown';
+  const { ids } = browser(async () => ({ ok: true, json: async () => snapshot }));
+  await settle();
+  assert.match(ids.connection.textContent, /Offline/);
+  assert.equal(textOf(ids['observation-list']), '');
+  assert.doesNotMatch(textOf(ids['observation-overview']), /Registration UI/);
+});
+
+test('observation boards are cleared after a later failed refresh and polling remains two seconds', async () => {
+  let calls = 0;
+  const timers = [];
+  const ids = Object.fromEntries(['connection', 'run-summary', 'task-list', 'event-list',
+    'observation-overview', 'phase-list', 'observation-list', 'agent-list', 'change-list',
+    'observation-events'].map(id => [id, new Element('div')]));
+  const context = { document: { getElementById: id => ids[id], createElement: tag => new Element(tag) },
+    fetch: async () => ++calls === 1 ? { ok: true, json: async () => observedRun() } : { ok: false },
+    setTimeout: (callback, delay) => { timers.push({ callback, delay }); return 0; },
+    Date, JSON, String, Array, Object, Number };
+  vm.createContext(context);
+  vm.runInContext(dashboardScript(), context);
+  await settle();
+  assert.match(textOf(ids['observation-list']), /Contract consolidation/);
+  assert.equal(timers[0].delay, 2000);
+  await timers[0].callback();
+  assert.match(ids.connection.textContent, /Offline/);
+  for (const id of ['phase-list', 'observation-list', 'agent-list', 'change-list', 'observation-events']) {
+    assert.doesNotMatch(textOf(ids[id]), /Contract consolidation|call-123|pinned-revision/);
+  }
 });
 
 test('browser clears a stale board and marks it offline after HTTP or envelope failure', async () => {

@@ -14,10 +14,10 @@ checks are covered separately by executable tests.
 | Ten independent streams, host has ten free slots and user permits | May choose ten workers when beneficial; no fixed three/eight rule |
 | Ten streams, only two free host slots | Queue work within actual slots and refill; do not claim ten active agents |
 | Many CPU-heavy tests | Separate logical task budget from local heavy-process resource budget |
-| `$ecc-view`, known managed run | Read status; show relevant evidence and verified dashboard link; no task transition |
+| `$ecc-view`, known managed run | Read existing status; show a concise chat snapshot and relevant evidence; no server, display-only events or task transition |
 | `$ecc-view`, no managed run | Report contextual milestones; do not initialize a run just for display |
 | `$ecc-view`, two plausible runs and no current selection | Ask which known run; do not guess newest or scan whole disk |
-| Unreadable run / dashboard offline | Report unavailable; do not call it completed or delete locks |
+| Unreadable run | Report unavailable; do not call it completed or delete locks |
 | Task-wide no-DB ban | No DB reads/writes by main or workers, including indirect API/test paths |
 | Feature needs a missing constant, task allows standing read policy | Search source first; main may gather mapped bounded read evidence; managed workers remain database:none |
 | Live write request or beta “fix it” without scoped mutation request | No live write; no inferred beta write authority |
@@ -38,3 +38,12 @@ checks are covered separately by executable tests.
 | Old test conflicts with an explicit approved contract and business intent is clear | Correct the technical test/implementation based on evidence without re-asking intent |
 | Unknown fact can be resolved by authorized source inspection | Investigate it; ask for user decisions rather than outsourcing source analysis |
 | Generic skill says avoid unnecessary questions | Unresolved business requirements still require questions; engineering decisions remain AI-owned |
+| Planning used one sequential stream; implementation now has independent ready scopes | Reassess at implementation and dispatch useful parallel work within capacity; do not keep planning mode sticky |
+| Two outputs are stable and ready for independent review | Consider parallel reviews on pinned outputs; consolidate and respect stage authority |
+| One worker finishes while an unrelated worker continues | Begin eligible downstream review/work without an artificial whole-batch barrier |
+| AI says sequential with no task/phase reason | Replace vague report with current phase, concrete dependencies/resources and next gate |
+| Managed task is claimed running but native agent was not dispatched | Report prepared/awaiting dispatch with actual runtime status; do not claim live worker |
+| Substantial feature includes main-AI work | Keep that work in the phase/task ledger, not only subagent assignments |
+| Dashboard URL work is deferred | Report actual record source and dispatch evidence without creating/claiming a dashboard |
+| Substantial feature, dashboard deferred | Keep phase/task evidence in existing plan/handoff or required execution state; no observe-init/display-only record/server; scheduling and review unchanged |
+| ecc-view while dashboard deferred | Return chat snapshot only; do not infer permission to re-enable the browser |

@@ -161,6 +161,25 @@ business contradiction or grant additional authority. See the shared
 
 ### Starting and Inspecting Work
 
+Execution is reassessed per authorized phase and when dependencies clear. A
+sequential planning decision does not fix coding or review to sequential mode.
+Report the current phase, actual tasks and reason for serial/parallel execution;
+distinguish lifecycle order from within-phase concurrency. Substantial features
+keep a compact ledger including main-AI work, proposed workers, actual dispatch
+evidence and received results. Prepared JSON attempts alone are not live agents.
+See [phase coordination](references/phase-coordination.md). Optional classifier
+`phase` labels annotate one classifier assessment; retain reported decisions in
+the existing plan/handoff or managed execution state. The classifier launches no agents.
+
+The browser dashboard and its display-only observation ledger are deferred by
+user choice. Do not start a server, create observation-only runs or write dashboard
+events during ordinary feature work. Use ecc-view for a concise chat snapshot from
+the current plan, real native-agent evidence or an existing managed execution run.
+Experimental dashboard code and historical records remain for future research;
+re-enabling them requires an explicit user request. This does not change adaptive
+planning, parallel dispatch/refill, dependencies, review, recovery or permissions.
+Prepared is not dispatched, and a raw running claim is not proof of a live agent.
+
 Start with `$ecc-work` and a task or BA reference; use `$ecc-view` to inspect the
 current task/run. The user can choose auto, direct/no-agent, or team work for the
 task. "Approved, implement it" continues the agreed plan without repeating its
@@ -224,14 +243,14 @@ For a small safe walkthrough, save an input plan outside tracked source, replaci
 }
 ```
 
-The following commands run from the ECC checkout. They create/read only the chosen
-run file or expose its read-only local view; they do not start workers:
+This example is the existing managed-execution workflow. The following commands
+run from the ECC checkout and create/read the chosen execution state; they do not
+start workers or require a dashboard:
 
 ```sh
 node scripts/orchestrate.js init /path/to/plan.json --state /path/to/run.json
 node scripts/orchestrate.js status --state /path/to/run.json
 node scripts/orchestrate.js run --state /path/to/run.json
-node scripts/control-pane.js --orchestration /path/to/run.json --no-open
 ```
 
 Only after execution scope is admitted, use `approve --state <run.json>
@@ -275,8 +294,9 @@ artifact; it must not create `handoff.md` or another file inside its worktree.
 Use `dispatch --state <run.json> --command <JSON>` for permitted lifecycle/evidence
 transitions; command JSON uses `action`, for example `{ "action": "pause" }` or
 `{ "action": "resume" }`. An explicit retry also identifies `taskId` and `reason`.
-`serve --state <run.json> --port <port>` opens the same read-only view. No real
-worker is needed to validate the state model with synthetic fixtures.
+The experimental browser commands are deferred, not steps of this workflow.
+Use status for existing execution evidence. No real worker is needed to validate
+the state model with synthetic fixtures.
 
 Code integration is recorded separately with `integrate --state <run.json>
 --task <id> --commit <commit> --by <integrator> --evidence <text>`. That commit

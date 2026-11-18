@@ -1,6 +1,6 @@
 # Báo cáo cập nhật quy trình điều phối ECC
 
-Ngày lập báo cáo: 11/11/2026. Cập nhật hướng sử dụng và worker budget: 12/11/2026.
+Ngày lập báo cáo ban đầu: 11/11/2026. Cập nhật gần nhất: 17/11/2026.
 
 Phạm vi: bản triển khai hiện có trong checkout ECC; chưa commit/push bản cập nhật này.
 Tài liệu đi kèm: [Hướng dẫn bắt đầu một tính năng mới](FEATURE-WORKFLOW-GUIDE.vi.md).
@@ -328,3 +328,113 @@ báo của luồng cũ chưa được chốt đều cho phản hồi phù hợp:
 hợp đầu, hỏi về nghiệp vụ ở trường hợp sau. Đây là kiểm tra giới hạn, không phải
 bảo đảm mọi lần mô hình đều tuân thủ.
 Không sửa runtime, không truy cập DB và chưa commit/push đợt chỉnh chỉ dẫn này.
+
+## 14. Cập nhật 17/11: đánh giá cách chia việc theo từng giai đoạn
+
+- Phân biệt thứ tự phụ thuộc giữa các giai đoạn với cách làm bên trong mỗi giai
+  đoạn. Lập plan tuần tự không mặc định kéo theo code/review tuần tự.
+- AI đánh giá lại khi chuyển giai đoạn hoặc có đầu ra mới làm hết phụ thuộc;
+  tự giao phần độc lập hữu ích trong quyền và slot thực tế, giữ yêu cầu không
+  chia agent hoặc ranh giới giai đoạn người dùng đã đặt.
+- Khi nói “tuần tự”, phải nêu giai đoạn/task, phụ thuộc/tài nguyên cụ thể và điều
+  kiện mở bước tiếp theo; không chỉ thông báo một chế độ cho toàn bộ tính năng.
+- Có bảng ngắn trong plan/handoff cho tính năng nhiều bước, gồm cả việc AI chính.
+  Phân biệt dự kiến, chuẩn bị attempt, đã giao agent thật và đã nhận kết quả;
+  chúng là các mức bằng chứng trong báo cáo, không phải trạng thái JSON mới.
+- `classifyWork`/CLI nhận `phase` tùy chọn cho một lần đánh giá, giữ tương thích
+  với đầu vào cũ. Nhãn này không tự khám phá task, lưu phase vào run hay khởi
+  chạy agent. Chỉ dẫn yêu cầu AI chính thực hiện việc đánh giá lại và điều phối.
+- Ở thời điểm cập nhật giai đoạn này, URL/mở dashboard và sửa UI được hoãn; phần
+  triển khai tiếp theo ở mục 15 thay thế giới hạn đó. Trạng thái `Running` sau claim chưa chứng
+  minh có native agent hoạt động; AI phải đối chiếu bằng chứng dispatch thay vì
+  diễn giải nó thành số worker thực đang chạy.
+
+Tham khảo [quy tắc theo giai đoạn](references/phase-coordination.md) và
+[các tình huống đánh giá](tests/phase-coordination.scenarios.md). Bộ setup/cài skill
+và CLI đạt 47/47 test; ba test mới bao phủ chuyển mode theo phase, kiểm tra nhãn
+và CLI roundtrip. Scoped ESLint và diff check đạt, review không thấy blocker.
+File scenario là đặc tả đánh giá, không phải kết quả mô hình đã vượt toàn bộ case.
+Không truy cập DB, không khởi động dashboard và chưa commit/push đợt cập nhật này.
+
+## 15. Dashboard quan sát thực thi kế hoạch (lịch sử; đã tạm bỏ ở mục 16)
+
+Đợt này bổ sung sổ quan sát để người dùng xem cách AI chính điều phối và thực hiện
+kế hoạch, không chỉ danh sách task kết thúc/chưa kết thúc. Đây là khả năng quan sát
+dưới sự giám sát của AI chính, không phải bộ điều phối chạy độc lập.
+
+### Cách dùng từ tính năng tiếp theo
+
+1. Dùng `$ecc-work` cùng tài liệu/mục tiêu như bình thường. Với tính năng nhiều bước,
+   AI bắt đầu observation run từ lúc tiếp nhận, kể cả đang plan tuần tự.
+2. AI ghi plan/phiên bản, việc của chính mình và agent, giai đoạn, lý do chia việc,
+   phụ thuộc, kết quả và thay đổi sau các mốc thực tế. Bạn không gõ từng lệnh nội bộ.
+3. Gọi `$ecc-view` trong phiên đang làm. AI xác định run, dùng CLI `view` để mở/tái
+   sử dụng server thụ động và đưa URL đã được kiểm tra. Trang nằm trong browser riêng.
+
+### Thành phần mới và ý nghĩa
+
+| Thành phần | Ý nghĩa |
+|---|---|
+| `observe-init <manifest.json> --state <run.json>` | Bắt đầu sổ quan sát JSON với execution tasks rỗng, không cần giả lập một task chạy thật |
+| `record --state <run.json> --event <event.json>` | Ghi mốc có evidence; không cấp quyền thực hiện hoặc tự gọi agent |
+| `view --state <run.json>` | Lấy URL của server chỉ đọc đã xác minh; không tự mở browser hoặc làm việc thay AI |
+| Observation plan/work items | Phân biệt kế hoạch, phần việc AI chính/agent, giai đoạn và phụ thuộc |
+| Phase decisions | Lưu chọn tuần tự/song song và lý do, thay vì một nhãn cố định cho cả tính năng |
+| Dispatch receipt | Lưu provider/tool/agent reference thật sau khi đã giao việc; tách khỏi chuẩn bị packet |
+| Attempts/results/reviews/changes | Đối chiếu kết quả với lần thực hiện, output và lịch sử sửa/đổi plan |
+
+Dashboard đọc lại trạng thái khoảng hai giây và không gọi model cho mỗi lần làm
+mới. Trang thể hiện observation do AI chính ghi kèm reference, không tự thu hoặc
+xác thực mọi hoạt động native agent. Receipt đã giao không chứng minh process còn
+sống; trạng thái cũ/thiếu evidence phải được nêu rõ. Không tự tạo phần trăm, ETA
+hoặc điểm chất lượng từ số lượng task. Việc nhỏ có thể giữ báo cáo trong hội thoại.
+
+Observation review/integration là receipt được ghi nhận; không tự thay thế các
+execution gate kiểm tra worktree/Git hiện có. Sổ quan sát không tạo worker, sửa
+source, chạy test hay commit/merge/push. `run --execute` vẫn khóa và mọi quyền DB,
+chạy ứng dụng/test, bug-stage và publication trước đây vẫn được giữ.
+
+Quy trình chi tiết cho AI/người muốn kiểm tra kỹ thuật:
+[dashboard-observation.md](references/dashboard-observation.md). Người dùng không
+cần thao tác các event thủ công. Run không xác định phải được báo thiếu dữ liệu,
+không tạo một lịch sử giả để hiển thị dashboard. Các con số ở mục trước thuộc
+những lần kiểm tra trước.
+
+### Kiểm chứng của đợt triển khai
+
+Bộ kiểm tra liên quan có 127 test: 126 đạt, không có test lỗi, một test bỏ qua do
+Windows thiếu quyền tạo file symlink. Phạm vi gồm 38 test setup/cài skill và các
+test orchestration CLI, model, store, dashboard, launcher, runtime và worktree.
+Scoped ESLint trên các file JavaScript thay đổi đạt; review cuối không còn blocker.
+Riêng ba module observation mới đạt 99,53% line coverage và 92,89% branch coverage
+trong lần chạy đo coverage với 13 test observation đều đạt.
+
+Đã khởi chạy dashboard thật, kiểm tra HTTP health và mở trang bằng trình duyệt
+với run chứa các mốc thực tế của đợt triển khai. Đây là xác minh trong môi trường
+hiện tại, không phải chứng nhận toàn bộ bộ test ECC hoặc mọi trình duyệt/kích
+thước màn hình. Đã kiểm tra viewport desktop 1440px và mobile giả lập 375px:
+không tràn ngang; trang nhận các mốc mới mà không cần tải lại thủ công.
+Không truy cập DB, chưa commit hoặc push đợt dashboard này.
+
+## 16. Tạm bỏ dashboard; giữ nguyên cách AI làm việc
+
+Theo yêu cầu mới, dashboard trình duyệt không còn là phần đang sử dụng. AI không
+tự chạy server, tạo observation run hoặc ghi event riêng chỉ để theo dõi. ecc-view
+trả bảng tiến độ ngắn trong hội thoại. Các hướng dẫn bật trang ở mục 15 là lịch
+sử triển khai, không phải quy trình hiện hành. Mã thử nghiệm và dữ liệu cũ được
+giữ để nghiên cứu sau; bật lại cần yêu cầu rõ, không suy từ câu “xem tiến độ”.
+
+Giữ nguyên lập kế hoạch theo code/yêu cầu đã chốt, hỏi khi nghiệp vụ chưa rõ,
+tự quyết kỹ thuật, đánh giá song song theo từng giai đoạn, số worker phù hợp và
+refill khi đủ điều kiện, ownership/worktree, dependency gate, review và lưu attempt
+cần cho điều phối/khôi phục. Không bỏ execution state thực sự cần dùng. AI chính
+vẫn điều phối; không thêm bộ chạy nền. Quyền DB, test, commit/push/deploy giữ nguyên.
+
+Đã cập nhật bootstrap, ecc-work/ecc-plan/ecc-view, metadata ecc-view, tài liệu
+phase coordination, README và hướng dẫn sử dụng; đánh dấu tài liệu dashboard là
+tham khảo đã tạm dừng. Không cần cài lại các skill đang được liên kết.
+
+Kiểm tra setup/cài skill đạt 38/38; rà soát độc lập phát hiện một ví dụ khởi chạy
+control pane còn sót trong README và đã loại bỏ. Đã dừng tiến trình dashboard
+của đợt triển khai sau khi đối chiếu instance/PID qua health endpoint. Giữ nguyên
+dữ liệu cũ; không truy cập DB, chưa commit hoặc push lần chỉnh này.

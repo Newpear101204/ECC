@@ -121,13 +121,57 @@ Before a controlled stop/handoff, stop dispatch, request active workers to stop,
 verify their state where possible, and preserve results. An abrupt disconnect
 does not prove workers stopped: record uncertainty and reconcile before resuming;
 do not claim automatic process termination that the host cannot guarantee.
-A passive read-only dashboard may remain visible; it must never dispatch work.
+The browser dashboard is deferred by user choice. Do not start its server or
+create observation-only runs/events solely for display, including on ecc-view.
+Report progress in conversation. Retain execution state needed for real coordination.
 
 Choose the lightest sufficient execution mode before creating orchestration state:
 answer questions and make clear small edits inline; use a brief sequential plan
 when steps are dependent; delegate only substantial independent work. File count
 alone is not the decision. Risk may require stronger verification without more
 agents. Honor explicit "no agents", "plan only", and concurrency preferences.
+
+### Reassess Execution Per Phase
+
+Separate lifecycle dependencies from execution inside a phase. An AI-selected
+sequential approach to discovery/planning does not select sequential coding or
+review for the whole task. Reassess when entering discovery, planning, plan review,
+implementation, code review, integration or verification, and when an upstream
+result removes a dependency. Consider only stages authorized for this task;
+preserve personal bug-stage stops and explicit user no-agent/concurrency choices.
+Read `personal-ecc/references/phase-coordination.md` for substantial multi-stage
+work. The main AI owns this reassessment; the user need not request each fan-out.
+
+At a material phase change, name the current phase, actual tasks, mode and concrete
+reason for dependencies or shared resources. Identify eligible parallel work and
+its prerequisites; do not merely announce "I chose sequential". Use independent
+workers when useful and supported; otherwise state the real scope/slot/resource
+reason. Serialize same-target integration, not unrelated work everywhere.
+
+Keep a compact phase/task ledger in the existing plan/handoff for substantial
+features, including main-AI work. Distinguish proposed work, prepared attempts,
+actual native-agent dispatch and received results. For managed runs, record actual
+assignments/results and retain their native-agent references in available handoff
+evidence; a claimed running status alone does not prove an agent was started.
+Report whether progress comes from conversation/plan or managed execution receipts.
+Retain actual native tool references, task/attempt/output identities, dependencies,
+reviews and retry history needed for real coordination. Keep this compact in the
+existing plan/handoff or execution run; do not duplicate it into a display-only
+ledger. Record dispatch only after the real native tool returns a reference.
+Keep missing evidence and interruption uncertainty explicit; never fabricate
+history, percentages, passing checks, reviewers or integration.
+
+### Dashboard Deferred; Coordination Unchanged
+
+Do not use observe-init, observation-only record events, view/serve or the legacy
+control pane as part of ordinary feature work or progress requests. The experimental
+dashboard code and old records are retained for possible future research, not an
+active workflow. Re-enabling it requires an explicit user request to do so; a
+request for progress or ecc-view alone is not that request. ecc-view returns a
+concise snapshot in chat. Plan-first behavior, per-phase reassessment, useful
+parallel delegation/refill, dependency gates, independent review, isolated managed
+handoffs, main-AI supervision, business clarification and all permission limits
+remain unchanged. Public run --execute remains disabled.
 
 For eligible parallel work, read `skills/team-agent-orchestration/SKILL.md` and
 use the explicit JSON-run runtime in `scripts/orchestrate.js`. Shape task IDs,

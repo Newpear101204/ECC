@@ -16,6 +16,7 @@ checkout identified by the bootstrap. Respond in the user's language.
 Interpret preferences naturally; these are conversation choices, not CLI flags:
 
 - **Auto** (default): choose the lightest sufficient method after inspecting scope.
+  Reassess that choice per phase; an AI-selected mode is not fixed for the task.
 - **Direct / no agents**: work in the main session; preserve appropriate checks.
 - **Team / parallel**: delegate substantial verified independent work when tools
   support it; dependencies still run in order. Explain if no useful split exists.
@@ -61,11 +62,19 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
 2. Establish the requested outcome, BA/contract version, acceptance criteria,
    existing implementation and granted actions. A clear small change stays inline.
    For meaningful planning, follow `personal-ecc/skills/ecc-plan/SKILL.md`.
+   Keep a compact plan/task summary for substantial work. Do not initialize a
+   dashboard or an observation-only ledger for displaying progress.
 3. Honor a plain approval of an identified plan as authority to implement that
    scope, subject to the work clarification gate above. It does not add DB
    writes, app/test execution, publication, or deployment
    outside established permissions. Do not ask the user to restate existing rules.
-4. For parallel work, read `skills/team-agent-orchestration/SKILL.md`. Select an
+4. Reassess execution at every authorized phase transition and when dependencies
+   clear. A sequential planning step does not make coding/review sequential.
+   Follow `personal-ecc/references/phase-coordination.md` for substantial features.
+   Name the phase, actual task dependencies, useful independent work and chosen
+   mode/reason. Honor explicit user no-agent/phase limits; the AI owns technical
+   scheduling and does not ask for repeated fan-out permission within granted scope.
+   For parallel work, read `skills/team-agent-orchestration/SKILL.md`. Select an
    explicit run budget from useful independent work, actually available agent
    slots (including main/occupied agents), user limits, resource-heavy commands
    and coordination cost. There is no fixed three-worker policy or ECC eight-worker
@@ -80,10 +89,18 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
 6. Review submissions against acceptance criteria and actual evidence, bound to
    task/attempt/revision/output hash. Respect accepted versus integrated gates.
    Missing checks stay not-run. Never manufacture approval or worker identities.
-7. Report the chosen mode and material milestones briefly. For a managed run,
-   retain the absolute run-file path and dashboard URL in task context/handoff.
+7. Report the chosen mode and material milestones briefly. Retain the absolute
+   managed execution run path in task context/handoff when one is used.
    Use `ecc-view` on progress requests; avoid dumping whole state or repeated logs.
    If no agents are available, continue feasible sequential work and state the limit.
+
+For substantial work, retain plan identity, main/agent ownership, dependencies,
+phase rationale and actual dispatch/result/review/retry evidence in the existing
+plan/handoff or required managed execution run. Do not duplicate that information
+into dashboard event files. The browser dashboard is deferred: do not launch its
+server or record observation-only events, even for ecc-view. ecc-view reports a
+concise chat snapshot. This removes display overhead only; adaptive scheduling,
+slot refill, evidence-based review and execution gates remain unchanged.
 
 ## Permissions and Runtime Boundaries
 

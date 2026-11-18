@@ -1,4 +1,4 @@
 interface:
   display_name: "ECC View"
-  short_description: "Inspect task progress and its read-only local dashboard"
-  default_prompt: "Use $ecc-view to show progress for the current task and its available dashboard."
+  short_description: "Show a concise task progress snapshot in chat"
+  default_prompt: "Use $ecc-view to show a concise progress snapshot for the current task in chat."

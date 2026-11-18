@@ -7,15 +7,19 @@ const { execFileSync } = require('node:child_process');
 const { classifyWork } = require('./lib/orchestration/classify');
 
 const VALUE_FLAGS = new Set(['state', 'command', 'input', 'by', 'evidence', 'task', 'commit',
-  'worker-command', 'worktree-root', 'port', 'worker', 'attempt', 'result']);
+  'worker-command', 'worktree-root', 'port', 'worker', 'attempt', 'result', 'event']);
 const SWITCH_FLAGS = new Set(['execute', 'json', 'help']);
-const COMMANDS = new Set(['classify', 'init', 'status', 'approve', 'dispatch', 'run', 'prepare', 'submit', 'integrate', 'serve']);
+const COMMANDS = new Set(['classify', 'init', 'observe-init', 'record', 'view', 'status',
+  'approve', 'dispatch', 'run', 'prepare', 'submit', 'integrate', 'serve']);
 
 function usage() {
   return [
     'DB-free task orchestration. No default state path or database access.',
     '  node scripts/orchestrate.js classify --input <JSON assessment>',
     '  node scripts/orchestrate.js init <plan.json> --state <new-run.json>',
+    '  node scripts/orchestrate.js observe-init <manifest.json> --state <new-run.json>',
+    '  node scripts/orchestrate.js record --state <run.json> --event <event.json>',
+    '  node scripts/orchestrate.js view --state <run.json> [--port 0]',
     '  node scripts/orchestrate.js status --state <run.json> [--json]',
     '  node scripts/orchestrate.js approve --state <run.json> --by <owner> --evidence <text>',
     '  node scripts/orchestrate.js dispatch --state <run.json> --command <JSON action>',
@@ -26,7 +30,9 @@ function usage() {
     '  node scripts/orchestrate.js serve --state <run.json> [--port 8765]',
     'run is preview-only. Real subprocess launch is blocked until a verified no-database sandbox adapter is available.',
     'prepare creates an isolated handoff; an authorized agent/operator performs the work, then submit checks the output.',
-    'integrate records verified existing integration; it never commits, merges, or pushes.'
+    'integrate records verified existing integration; it never commits, merges, or pushes.',
+    'observe-init/record track coordinator-reported work without granting execution approval.',
+    'view opens/reuses a passive local server and prints its verified URL; it never starts workers.'
   ].join('\n');
 }
 
@@ -48,7 +54,7 @@ function parseArgs(argv) {
     if (path.extname(options.state).toLowerCase() !== '.json') throw new Error('State must be an explicit JSON file.');
     options.state = path.resolve(options.state);
   }
-  if (options.positionals.length && options.command !== 'init') throw new Error('Unexpected positional argument.');
+  if (options.positionals.length && !['init', 'observe-init'].includes(options.command)) throw new Error('Unexpected positional argument.');
   return options;
 }
 
@@ -66,12 +72,22 @@ function git(repoRoot, args) {
   }).trim();
 }
 
-function readPlan(file) {
-  if (!file) throw new Error('init requires one plan.json path.');
+function readJsonInput(file, label) {
+  if (!file || path.extname(file).toLowerCase() !== '.json') throw new Error(`${label} requires an explicit .json file.`);
   const resolved = path.resolve(file);
+  const root = path.parse(resolved).root;
+  let current = root;
+  for (const part of resolved.slice(root.length).split(path.sep).filter(Boolean)) {
+    current = path.join(current, part);
+    if (fs.lstatSync(current).isSymbolicLink()) throw new Error(`Unsafe ${label} input: symlink path.`);
+  }
   const stat = fs.lstatSync(resolved);
-  if (stat.isSymbolicLink() || !stat.isFile() || stat.size > 1024 * 1024) throw new Error('Invalid plan file.');
-  const plan = json(fs.readFileSync(resolved, 'utf8'), 'plan');
+  if (!stat.isFile() || stat.nlink !== 1 || stat.size > 1024 * 1024) throw new Error(`Unsafe ${label} file.`);
+  return json(fs.readFileSync(resolved, 'utf8'), label);
+}
+
+function readPlan(file) {
+  const plan = readJsonInput(file, 'plan');
   if (!plan.repoRoot || !path.isAbsolute(plan.repoRoot)) throw new Error('Plan repoRoot must be absolute.');
   const baseRef = git(plan.repoRoot, ['rev-parse', '--verify', '--end-of-options', `${plan.baseRef || 'HEAD'}^{commit}`]);
   // Importing a plan is not execution approval; record approval as a separate action.
@@ -109,7 +125,16 @@ function dispatch(store, command) {
 
 function printStatus(state, out) {
   const snapshot = require('./lib/orchestration/model').snapshot(state);
-  out(`Run ${state.id} | approved=${state.approved} paused=${state.paused} | running=${snapshot.runningCount}/${state.maxWorkers}`);
+  out(`Run ${state.id} | approved=${state.approved} paused=${state.paused} | claimed slots=${snapshot.runningCount}/${state.maxWorkers}`);
+  if (snapshot.observability) {
+    const observation = snapshot.observability;
+    out(`Recorded observation | session=${observation.session.status} lastRecordedAt=${observation.lastRecordedAt || 'none'}`);
+    for (const item of observation.items) {
+      const attempt = item.attempts.find(row => row.id === item.currentAttemptId);
+      out(`${item.id}\t${item.phase}\t${item.owner}\t${item.status}\t${item.title}\tagent=${attempt?.dispatch?.agentRef || 'no dispatch receipt'}`);
+    }
+    out('Observation receipts are coordinator-reported, not authenticated process liveness or execution approval.');
+  }
   for (const task of snapshot.tasks) {
     const attempt = task.attempts.find(item => item.id === task.currentAttemptId);
     const deps = task.dependsOn.map(d => `${d.taskId}:${d.gate}`).join(', ') || '-';
@@ -157,6 +182,32 @@ async function serve(store, options, out) {
   });
 }
 
+function initialize(store, options, out) {
+  if (options.positionals.length !== 1) throw new Error('init requires one plan.json path.');
+  const plan = readPlan(options.positionals[0]);
+  if (options.command === 'observe-init' && plan.tasks !== undefined &&
+      (!Array.isArray(plan.tasks) || plan.tasks.length)) throw new Error('observe-init cannot import execution tasks; use init for an execution plan.');
+  const state = store.init(options.command === 'observe-init'
+    ? { ...plan, observationOnly: true, tasks: [], approved: false } : plan);
+  out(JSON.stringify(require('./lib/orchestration/model').snapshot(state), null, 2));
+}
+
+function recordObservation(store, options, out) {
+  const event = readJsonInput(options.event, 'event');
+  const state = store.dispatch({ action: 'observe', event });
+  const item = state.observability.items.find(row => row.id === event.itemId);
+  out(JSON.stringify({ runId: state.id, recorded: event.type, seq: state.observability.seq,
+    ...(item ? { item: { id: item.id, status: item.status, attemptId: item.currentAttemptId,
+      revision: item.output?.revision, outputHash: item.output?.outputHash } } : {}) }, null, 2));
+}
+
+async function viewRun(_store, options, out) {
+  const result = await require('./lib/orchestration/dashboard-launch').openDashboard({
+    filePath: options.state, port: options.port === undefined ? 0 : Number(options.port)
+  });
+  out(JSON.stringify(result, null, 2));
+}
+
 async function main(argv = process.argv.slice(2), { out = console.log } = {}) {
   const options = parseArgs(argv);
   if (options.help) { out(usage()); return 0; }
@@ -166,11 +217,12 @@ async function main(argv = process.argv.slice(2), { out = console.log } = {}) {
   }
   const { createFileStore } = require('./lib/orchestration/file-store');
   const store = createFileStore(options.state);
-  if (options.command === 'init') {
-    if (options.positionals.length !== 1) throw new Error('init requires one plan.json path.');
-    const state = store.init(readPlan(options.positionals[0]));
-    out(JSON.stringify(require('./lib/orchestration/model').snapshot(state), null, 2));
-  } else if (options.command === 'status') {
+  const observationHandler = { init: initialize, 'observe-init': initialize, record: recordObservation, view: viewRun }[options.command];
+  if (observationHandler) {
+    await observationHandler(store, options, out);
+    return 0;
+  }
+  if (options.command === 'status') {
     const state = store.read();
     if (options.json) out(JSON.stringify(require('./lib/orchestration/model').snapshot(state), null, 2));
     else printStatus(state, out);
