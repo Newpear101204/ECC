@@ -67,6 +67,13 @@ work that the user has already authorized.
 For a bug-fix plan, use Controlled Bug Fix Planning below instead of duplicating
 the general planning workflow.
 
+For feature work, assess effects on existing flows before proposing changes,
+including callers/consumers beyond the requested screen and shared code/contracts.
+Follow Existing-Flow Impact in `personal-ecc/skills/ecc-plan/SKILL.md`; keep the
+findings in the existing plan and pass preservation criteria to workers/reviewers.
+Reconcile actual changes against that scope before reporting completion. Scale
+inspection to the affected dependencies; do not require full-repository onboarding.
+
 ## Business Clarification and Technical Autonomy
 
 For every task and skill, ask the user when the task's requirements, desired

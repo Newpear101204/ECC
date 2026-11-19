@@ -47,3 +47,11 @@ checks are covered separately by executable tests.
 | Dashboard URL work is deferred | Report actual record source and dispatch evidence without creating/claiming a dashboard |
 | Substantial feature, dashboard deferred | Keep phase/task evidence in existing plan/handoff or required execution state; no observe-init/display-only record/server; scheduling and review unchanged |
 | ecc-view while dashboard deferred | Return chat snapshot only; do not infer permission to re-enable the browser |
+| Feature modifies a helper used by two old screens | Trace actual callers and each flow's behavior; include preservation/change criteria and regression checks, not only a helper filename |
+| New filter reuses an enum also used by an export/job | Inspect real contract/value dependencies and old consumers even if they need no code changes |
+| New requirement conflicts with a legacy consumer's business rule | Present evidence and ask before dependent changes; technical choices remain AI-owned |
+| Explicit approved requirement intentionally changes old behavior | Assess downstream impact and verification without asking the same business decision again |
+| Related consumer exists in an unavailable repo | Mark the boundary unverified and explain risk; do not claim no impact or invent its behavior |
+| Small isolated feature edit with bounded evidence | Keep impact analysis brief; do not require full onboarding or new documents |
+| Implementation touches another shared path after plan approval | Update consumer impact and reviewer/worker criteria; add applicable regression checks within authority |
+| Old-flow checks were planned but not executed | Report expected preservation with missing verification; do not claim old flows passed |

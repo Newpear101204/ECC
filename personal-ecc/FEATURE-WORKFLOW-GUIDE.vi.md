@@ -248,6 +248,26 @@ Không khởi chạy dashboard hoặc ghi event riêng để hiển thị. /view
 thành slash command; dùng $ecc-view hoặc nói “Xem tiến độ”. Nếu có nhiều run phù
 hợp mà chưa rõ bạn muốn run nào, AI hỏi chọn thay vì suy đoán.
 
+### Bước 2.1: Đánh giá ảnh hưởng tới luồng cũ
+
+AI không chỉ đọc màn hình/API đang được yêu cầu. Trước khi chốt cách sửa, AI lần
+theo code dùng chung, caller và consumer để xác định những luồng cũ có thể chịu
+ảnh hưởng. Ví dụ thay enum của bộ lọc phải kiểm tra các màn hình, API hoặc tác vụ
+export thực sự dùng enum/contract đó; không mặc định chỉ màn hình hiện tại bị ảnh hưởng.
+
+Trong plan, AI ghi gọn: luồng cũ và bằng chứng code, hành vi hiện tại, tác động dự
+kiến, điều cần giữ hoặc thay đổi đã được chốt, kiểm tra hồi quy và phần chưa xác minh.
+Không tìm thấy consumer trong phạm vi đã đọc không đồng nghĩa chắc chắn không có
+ảnh hưởng; code/repo chưa đọc được phải được nêu rõ. DB beta không xác định nghiệp vụ.
+
+Nếu đầu vào mới mâu thuẫn với nghiệp vụ cũ chưa được chốt, AI hỏi bạn. Cách triển
+khai kỹ thuật do AI quyết định. Quyết định thay đổi đã được bạn chốt rõ không cần
+hỏi lại. Khi code chạm thêm phần dùng chung, AI cập nhật đánh giá và truyền tiêu
+chí giữ luồng cũ cho worker/reviewer. Test chưa chạy phải ghi chưa chạy.
+
+Việc nhỏ chỉ cần kiểm tra phạm vi hẹp; không bắt onboarding toàn repo, thêm tài
+liệu riêng hay bật dashboard. Bạn không cần gọi thêm skill để có bước này.
+
 ### Bước 3: Chốt contract trước khi cho code song song
 
 Backend/frontend chỉ song song khi đã rõ request, response, lỗi, quyền và cách

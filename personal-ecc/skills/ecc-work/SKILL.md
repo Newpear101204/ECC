@@ -62,6 +62,10 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
 2. Establish the requested outcome, BA/contract version, acceptance criteria,
    existing implementation and granted actions. A clear small change stays inline.
    For meaningful planning, follow `personal-ecc/skills/ecc-plan/SKILL.md`.
+   Before changing a feature, follow its Existing-Flow Impact procedure: trace
+   shared code/contracts to existing callers and consumers, identify preserved
+   versus explicitly changed behavior, and plan evidence-backed regression checks.
+   A clear small edit needs only a bounded check, not full-repository onboarding.
    Keep a compact plan/task summary for substantial work. Do not initialize a
    dashboard or an observation-only ledger for displaying progress.
 3. Honor a plain approval of an identified plan as authority to implement that
@@ -89,6 +93,10 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
 6. Review submissions against acceptance criteria and actual evidence, bound to
    task/attempt/revision/output hash. Respect accepted versus integrated gates.
    Missing checks stay not-run. Never manufacture approval or worker identities.
+   Pass existing-flow preservation criteria and affected consumers to workers and
+   reviewers. Compare the actual diff with the impact assessment; newly touched
+   shared paths require updated consumer analysis and applicable regression checks.
+   Report checks not run and unknown consumers instead of promising no regressions.
 7. Report the chosen mode and material milestones briefly. Retain the absolute
    managed execution run path in task context/handoff when one is used.
    Use `ecc-view` on progress requests; avoid dumping whole state or repeated logs.

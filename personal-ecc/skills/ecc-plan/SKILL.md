@@ -46,6 +46,7 @@ workspace file can be found. Never claim to have read an unavailable file.
    patterns. Cite paths and line numbers for examples to follow. State when no
    comparable code exists or repository access is unavailable; do not invent files,
    APIs, dependencies, or validation results.
+   Apply Existing-Flow Impact below before settling the change boundary and tasks.
 3. Break work into dependency-ordered tasks. For each, identify the concrete
    change, expected files/modules, existing patterns to follow, and completion
    checks. Distinguish verified files from proposed new paths.
@@ -63,6 +64,40 @@ workspace file can be found. Never claim to have read an unavailable file.
 6. Present enough detail to begin work, proportional to task size. If approval is
    still required before implementation, state that the next step is approval or
    revision and stop at the plan artifact.
+
+## Existing-Flow Impact
+
+Before proposing a feature change, assess how it could affect existing flows,
+not only how the requested screen or API works. Scale this to the change: trace
+relevant dependencies and reuse still-applicable findings, not the entire repo.
+
+- Trace the current path from entry/input through validation, transformations,
+  shared services/components/query scopes and contracts to outputs or side effects.
+  Trace old flows in code; DB rows, especially beta rows, are not business rules.
+- Search references to the proposed change points and follow real callers and
+  downstream consumers. Include other screens, endpoints, jobs, integrations or
+  repositories when evidence links them; inspect shared enums, serializers, caches,
+  state transitions and stored-data compatibility when relevant. Merely listing
+  shared files or matching names does not establish a behavioral dependency.
+- For each materially affected old flow, cite source/contract/test evidence, its
+  current behavior, the expected effect, what must remain compatible or is explicitly
+  intended to change, and a focused regression check. A consumer may require no
+  code change but still need validation. Carry these criteria into task handoffs.
+- Distinguish confirmed dependencies/effects, plausible risks and unverified
+  boundaries. If a consumer or repository is unavailable, state that gap and its
+  consequence; do not claim no impact from a limited search. Existing code establishes
+  current behavior, not automatic authority to preserve every legacy behavior.
+- Ask when new requirements conflict with an unresolved existing business rule or
+  imply an unapproved change to an old flow. Hold affected work; reuse explicit
+  approved changes without asking again. Choose the technical implementation and
+  compatibility strategy autonomously within the settled outcome and permissions.
+
+Keep the impact summary in the existing plan (a brief sentence may suffice for an
+isolated edit). Link each material risk to preservation/change criteria and planned
+regression evidence. During implementation/review, compare the actual diff with this
+assessment; expand it when new shared dependencies are touched. Separate source-based
+expectations from executed verification. This procedure grants no DB, browser,
+app/test execution or publication authority and adds no mandatory onboarding files.
 
 ## Business Clarification and Technical Decisions
 
@@ -203,6 +238,10 @@ Complexity: {low / medium / high}
 
 ## Patterns to Follow
 {Path:line references and how they apply}
+
+## Existing Flows and Impact
+{Affected old flow/consumer, source evidence, current behavior, expected effect,
+preservation or approved-change criterion, regression check and evidence gaps}
 
 ## Implementation Tasks
 1. {Change, files/modules, dependencies, validation}
