@@ -186,6 +186,14 @@ task. "Approved, implement it" continues the agreed plan without repeating its
 permissions or database rules. Publication and execution remain within the scope
 already granted. These are skills, not a newly installed universal `/view` command.
 
+Every feature now requires one maintained Markdown task file, even a small/direct
+edit or plan-only feature. It contains the needed requirements and decisions,
+old-flow impact, actual progress/checks, permissions and portable resume context;
+links to BA/chat alone are insufficient. Reuse the existing project/user location
+and the same file across sessions. See the [portable feature file contract](references/feature-task-file.md).
+The file transfers task context, not uncommitted code or native-agent sessions.
+No additional JSON run, dashboard, agents or publication permission follows from it.
+
 Vietnamese operator documents: [implementation report](ORCHESTRATION-REPORT.vi.md)
 and [new-feature walkthrough](FEATURE-WORKFLOW-GUIDE.vi.md). The walkthrough starts
 with short user actions; PowerShell commands are an optional technical appendix

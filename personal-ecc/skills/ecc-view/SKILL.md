@@ -13,8 +13,12 @@ Resolve the shared ECC checkout from the personal bootstrap.
 
 ## Locate and Report
 
-Use the current task's plan, conversation milestones and actual native-agent
-references. When a managed execution run is already known and relevant, read its
+Prefer the identified canonical feature Markdown for task requirements and current
+progress; cross-check relevant source/managed evidence when needed. If it has not
+been updated, disclose the gap rather than presenting it as live state. Do not
+create a new feature file or duplicate handoff solely for a progress request.
+Use conversation milestones and actual native-agent references as supporting
+evidence. When a managed execution run is already known and relevant, read its
 status with node <ECC-root>/scripts/orchestrate.js status --state <explicit-run.json>
 --json. Keep the absolute run path in existing context/handoff. Do not scan the
 whole disk, credentials, caches or unrelated sessions to discover a run. If several

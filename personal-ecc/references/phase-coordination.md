@@ -63,8 +63,11 @@ clarification and explicit user preferences still take precedence.
 
 ## Keep Evidence of Actual Work
 
-Keep a compact phase/task summary in the existing plan/handoff for substantial
-work, including main-AI work. The dashboard and its separate observation event
+Keep a phase/task summary in the canonical feature Markdown for every feature,
+including main-AI work, following [the portable file contract](feature-task-file.md).
+Small work may use a compact file; substantial work may also need execution state.
+Maintain milestones and controlled handoff, not a log of every tool call.
+The dashboard and its separate observation event
 ledger are deferred; do not initialize either for reporting. For example:
 
 | Phase/task | Prerequisite | Owner | Work evidence | Next gate/blocker |
@@ -96,7 +99,10 @@ could not be recorded. Do not rewrite live state by hand or pretend the CLI can
 append/change a run's task graph; prepare a revised plan/run with preserved evidence
 when a structural revision is genuinely required under existing authority.
 
-For clear small work, show known conversation progress and label that source.
+For clear small features, maintain the same Markdown artifact while keeping direct
+execution lightweight. On another machine/session, read it and reconcile actual
+repo/revision/pending code, permissions and historical worker references before
+continuing. Do not assume that a Markdown copy transfers code or native sessions.
 ecc-view returns a concise chat snapshot. Do not start a dashboard server, create
 display-only event files, or manufacture history. Keep execution state needed for
 actual scheduling, dependency gates, review and recovery; those remain unchanged.

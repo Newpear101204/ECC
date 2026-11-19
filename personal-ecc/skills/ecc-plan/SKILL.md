@@ -23,10 +23,19 @@ board or worktree; dependent work can use a brief sequential plan. Delegate
 substantial independent work only when authorized by the user or applicable
 project instructions, and do not depend on runtime-specific agent names or tools.
 
+For every feature plan, including small tasks, create or update one canonical
+Markdown task file using `personal-ecc/references/feature-task-file.md` from the
+shared ECC root. It must carry the needed requirements, decisions, progress and
+portable resume context without requiring the original BA or old conversation.
+Chat summaries accompany the file; they do not replace it. Scale length, not the
+artifact requirement. Reuse the same file in ecc-work; do not make a second handoff.
+
 ## Inputs
 
-- **Free-form requirements:** use the request and conversation context; return an inline plan.
-- **Ordinary Markdown file:** read it as reference material; return an inline plan.
+- **Free-form requirements:** use the request and conversation context; persist a
+  feature plan in the canonical task file and summarize it in chat.
+- **Ordinary Markdown file:** read it as reference; update it if it is the designated
+  feature task file, otherwise capture needed task details in the canonical file.
 - **`*.prd.md` file:** read the PRD and follow PRD mode below.
 - **No requirements:** use prior context; if the objective remains unknown, ask
   one concise question to identify it.
@@ -64,6 +73,9 @@ workspace file can be found. Never claim to have read an unavailable file.
 6. Present enough detail to begin work, proportional to task size. If approval is
    still required before implementation, state that the next step is approval or
    revision and stop at the plan artifact.
+   Save/update the feature Markdown and report its path even for small features.
+   Capture known requirements and explicit gaps at intake; do not wait for code
+   approval or a complete BA before creating the initial factual task record.
 
 ## Existing-Flow Impact
 
@@ -138,8 +150,10 @@ its own gates permit, without waiting for unrelated work solely for a batch boun
 Integration into the same target and final cross-feature reconciliation stay ordered.
 
 When independent work warrants orchestration, use
-`skills/team-agent-orchestration/SKILL.md` from the shared ECC checkout. Keep an
-ordinary inline plan for simpler work instead of generating a run file by default.
+`skills/team-agent-orchestration/SKILL.md` from the shared ECC checkout. Keep a
+brief plan for simpler work instead of generating a JSON execution run by default.
+For a feature, that brief plan must still live in its Markdown task file; JSON
+execution state is optional when the work does not warrant orchestration.
 Before dispatch, define each task's stable ID, goal/source requirements, kind,
 owned paths, acceptance criteria, baseline, versioned input artifacts, validation,
 and permitted actions. The runtime represents dependencies as
@@ -211,10 +225,11 @@ separate investigation.
   the PRD's structure and location. Do not migrate document formats.
 - If status or dependencies are too ambiguous to select a milestone, ask instead
   of assuming completion or restarting work already in progress.
-- Write `.claude/plans/{kebab-case-name}.plan.md` for compatibility with `/plan`.
-  Prefer a different plan directory when specified by the project or user. Avoid
-  overwriting unrelated plans; update the intended plan or use a milestone-specific
-  filename.
+- Write or reuse the canonical feature Markdown following the location policy in
+  `personal-ecc/references/feature-task-file.md` (fallback `.claude/plans/` for
+  compatibility with `/plan`). Prefer the project/user's existing location. Avoid
+  overwriting unrelated plans. Continue the same feature file across its milestones;
+  use a separate filename only for a distinct feature, not a new session or stage.
 - After creating the plan, update only the selected `Delivery Milestones` row:
   change `pending` to `in-progress` and set its `Plan` cell to the plan path.
   Preserve all other rows. Do not add a table when none exists. Respect any
@@ -224,7 +239,9 @@ separate investigation.
 
 ## Output Template
 
-Adapt to task size; omit empty sections:
+Use the compact structure in `personal-ecc/references/feature-task-file.md` for
+the complete artifact. The planning detail below can be merged into it. Adapt
+to task size, but retain all applicable resume context and explicit unknowns:
 
 ```markdown
 # Plan: {task name}
@@ -255,4 +272,9 @@ reason, main-AI owner or proposed worker; reassess at execution, not a live assi
 
 ## Risks and Open Questions
 {Concrete risks, mitigations, questions affecting implementation}
+
+## Portable Handoff and Current State
+{Complete needed requirement details and settled answers; permissions/stage;
+repo/branch/commit; actual task/check/review status; uncommitted work and required
+artifacts/availability; exact next actions. Source links alone are insufficient.}
 ```

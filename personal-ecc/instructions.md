@@ -67,6 +67,14 @@ work that the user has already authorized.
 For a bug-fix plan, use Controlled Bug Fix Planning below instead of duplicating
 the general planning workflow.
 
+Every feature, including small/direct changes and plan-only feature work, must
+have one maintained, self-contained Markdown task file. Follow
+`personal-ecc/references/feature-task-file.md` for location, required task context,
+milestone updates and cross-machine resume. An inline chat plan alone is not the
+feature artifact. Small work still uses lightweight execution; no dashboard or
+extra agents are required. Respect explicit read-only instructions and report an
+artifact-writing blocker rather than claiming a file was created.
+
 For feature work, assess effects on existing flows before proposing changes,
 including callers/consumers beyond the requested screen and shared code/contracts.
 Follow Existing-Flow Impact in `personal-ecc/skills/ecc-plan/SKILL.md`; keep the
@@ -130,10 +138,12 @@ does not prove workers stopped: record uncertainty and reconcile before resuming
 do not claim automatic process termination that the host cannot guarantee.
 The browser dashboard is deferred by user choice. Do not start its server or
 create observation-only runs/events solely for display, including on ecc-view.
-Report progress in conversation. Retain execution state needed for real coordination.
+Report progress in conversation and maintain the feature Markdown when applicable.
+Retain execution state needed for real coordination.
 
 Choose the lightest sufficient execution mode before creating orchestration state:
-answer questions and make clear small edits inline; use a brief sequential plan
+answer questions directly and make clear small edits without team ceremony;
+feature edits still require their Markdown artifact. Use a brief sequential plan
 when steps are dependent; delegate only substantial independent work. File count
 alone is not the decision. Risk may require stronger verification without more
 agents. Honor explicit "no agents", "plan only", and concurrency preferences.
@@ -155,8 +165,9 @@ its prerequisites; do not merely announce "I chose sequential". Use independent
 workers when useful and supported; otherwise state the real scope/slot/resource
 reason. Serialize same-target integration, not unrelated work everywhere.
 
-Keep a compact phase/task ledger in the existing plan/handoff for substantial
-features, including main-AI work. Distinguish proposed work, prepared attempts,
+Keep phase/task progress in the canonical feature Markdown for every feature,
+including main-AI work; substantial work may also need managed execution state.
+Distinguish proposed work, prepared attempts,
 actual native-agent dispatch and received results. For managed runs, record actual
 assignments/results and retain their native-agent references in available handoff
 evidence; a claimed running status alone does not prove an agent was started.

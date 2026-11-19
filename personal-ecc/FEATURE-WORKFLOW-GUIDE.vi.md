@@ -39,6 +39,43 @@ AI kế thừa kế hoạch, quyền đã cấp và quy tắc thường trực; 
 bootstrap, số worker hay chính sách DB. Nếu ngay từ đầu bạn đã giao triển khai,
 skill không tự chèn thêm một vòng xin phép chỉ vì tên quy trình có bước lập plan.
 
+### Một file Markdown cho mỗi tính năng, kể cả việc nhỏ
+
+AI tạo hoặc tiếp tục một file Markdown duy nhất ngay từ lúc nhận tính năng, kể cả
+chỉ lập plan hoặc sửa nhỏ. File là nơi lưu yêu cầu và trạng thái để tiếp tục trên
+máy khác; bảng trong chat chỉ tóm tắt. Không cần gọi thêm skill hay nhắc AI tạo file.
+
+File phải chứa đủ nội dung công việc: mục tiêu/phạm vi, yêu cầu và các nhánh hành
+vi, field/validation/UI/API cần thiết, tiêu chí nghiệm thu, quyết định đã chốt và
+câu hỏi còn mở; luồng cũ bị ảnh hưởng, cách triển khai; task/phụ thuộc, việc đã làm,
+việc còn lại, bằng chứng test/review và giới hạn quyền. Không chỉ dẫn link BA/Figma
+hoặc ghi “như đã trao đổi” rồi yêu cầu AI máy khác đọc lại nguồn cũ.
+
+AI cập nhật cùng file sau các mốc quan trọng, trước khi dừng/bàn giao và khi hoàn
+thành. Việc nhỏ dùng bản ngắn nhưng vẫn đủ ngữ cảnh; không sinh thêm nhiều bản
+plan/progress/handoff trùng nhau và không bật dashboard.
+
+Ưu tiên file/vị trí bạn chỉ định hoặc thư mục plan đang có trong project. Nếu
+không có, dùng `.claude/plans/<ten-tinh-nang>.plan.md`; riêng Personal ECC giữ
+plan cá nhân ở `personal-ecc/plans/`. AI báo đường dẫn, không ghi đè task khác.
+Nếu nhiệm vụ chỉ đọc hoặc không ghi được file, AI báo giới hạn thay vì giả vờ đã lưu.
+
+Khi chuyển máy, mang file này cùng phiên bản source tương ứng. File ghi repo,
+branch, commit, code chưa commit, asset/patch cần chuyển và trạng thái chuyển thực
+tế. Chỉ copy Markdown không làm code dở dang xuất hiện ở máy nhà; AI không tự có
+quyền commit/push/upload. File bị ignore hoặc chỉ lưu cục bộ phải được báo rõ.
+
+Ở máy mới, bạn có thể gửi:
+
+```text
+$ecc-work Tiếp tục tính năng theo file [đường dẫn file Markdown].
+```
+
+AI đọc file để nhận đủ ngữ cảnh, kiểm tra repo/branch/commit và code thực tế, đối
+chiếu việc đã xong/chưa xong rồi tiếp tục phần đủ điều kiện. Không tự reset code,
+chạy lại tác động đã hoàn tất hoặc coi agent ID cũ còn sống. Nếu thiếu source/asset
+hay có mâu thuẫn thật, AI nêu đúng blocker; không bắt đọc lại BA chỉ vì đổi phiên.
+
 ### Theo dõi tiến độ trong hội thoại
 
 Dashboard và việc ghi observation event chỉ để hiển thị đã được tạm bỏ. AI không
@@ -105,7 +142,7 @@ UI A và UI B có thể code song song; review từng phần bắt đầu khi ph
 quả, còn tích hợp vào cùng branch sẽ tuần tự.” Nếu không chia được, AI phải nêu
 lý do cụ thể như chung file, thiếu đầu vào, thiếu slot hoặc tải máy.
 
-Với tính năng nhiều bước, AI giữ bảng ngắn trong plan/handoff gồm giai đoạn/task,
+Với mọi tính năng, AI giữ tiến độ trong file Markdown, gồm giai đoạn/task,
 phụ thuộc, người làm (kể cả AI chính), bằng chứng và bước tiếp theo. Phân biệt:
 **dự kiến giao → đã chuẩn bị packet → đã giao agent thật → đã nhận kết quả**.
 Đó là các mức bằng chứng. Task executor `running` chỉ do claim chưa chứng minh
@@ -265,8 +302,8 @@ khai kỹ thuật do AI quyết định. Quyết định thay đổi đã đư�
 hỏi lại. Khi code chạm thêm phần dùng chung, AI cập nhật đánh giá và truyền tiêu
 chí giữ luồng cũ cho worker/reviewer. Test chưa chạy phải ghi chưa chạy.
 
-Việc nhỏ chỉ cần kiểm tra phạm vi hẹp; không bắt onboarding toàn repo, thêm tài
-liệu riêng hay bật dashboard. Bạn không cần gọi thêm skill để có bước này.
+Việc nhỏ chỉ cần kiểm tra phạm vi hẹp và ghi vào file tính năng; không bắt onboarding
+toàn repo, thêm báo cáo impact riêng hay bật dashboard. Không cần gọi thêm skill.
 
 ### Bước 3: Chốt contract trước khi cho code song song
 

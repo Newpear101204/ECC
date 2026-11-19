@@ -60,13 +60,20 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
    their loaded context within the session; do not repeatedly read every skill.
    Use local canonical skills instead of stale cache content where customized.
 2. Establish the requested outcome, BA/contract version, acceptance criteria,
-   existing implementation and granted actions. A clear small change stays inline.
+   existing implementation and granted actions. A clear small change uses direct
+   execution, while a feature still requires its Markdown file.
+   For every feature, create or resume one canonical Markdown task file at intake,
+   including small/direct and plan-only work. Follow
+   `personal-ecc/references/feature-task-file.md` from the shared ECC root for its
+   self-contained requirements, decisions, status, portable paths and resume rules.
+   Put needed BA/design/contract contents in the file, not only source links.
    For meaningful planning, follow `personal-ecc/skills/ecc-plan/SKILL.md`.
    Before changing a feature, follow its Existing-Flow Impact procedure: trace
    shared code/contracts to existing callers and consumers, identify preserved
    versus explicitly changed behavior, and plan evidence-backed regression checks.
    A clear small edit needs only a bounded check, not full-repository onboarding.
-   Keep a compact plan/task summary for substantial work. Do not initialize a
+   Keep plan/task progress in that file at a depth sufficient to resume the work.
+   Do not initialize a
    dashboard or an observation-only ledger for displaying progress.
 3. Honor a plain approval of an identified plan as authority to implement that
    scope, subject to the work clarification gate above. It does not add DB
@@ -99,6 +106,13 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
    Report checks not run and unknown consumers instead of promising no regressions.
 7. Report the chosen mode and material milestones briefly. Retain the absolute
    managed execution run path in task context/handoff when one is used.
+   Update the canonical feature file at meaningful milestones and before stop or
+   completion. Record code revision and required uncommitted files/artifacts;
+   document portable repo-relative locators as well as any local run path.
+   On resume, read this file, reconcile actual repo/code/check/worker state and
+   continue eligible work without routinely asking for the BA or old conversation.
+   Missing code/assets or conflicting state are blockers to reconcile, not permission
+   to invent history, overwrite changes or replay completed effects.
    Use `ecc-view` on progress requests; avoid dumping whole state or repeated logs.
    If no agents are available, continue feasible sequential work and state the limit.
 
