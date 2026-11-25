@@ -10,6 +10,7 @@
 |---------|-------------|
 | `/plan` | Restate requirements, assess risks, write step-by-step implementation plan — **waits for your confirm before touching code** |
 | `/plan-canvas` | Open a plan or HTML artifact in the browser Plan Canvas for annotate-and-approve review |
+| `/ui-canvas` | Preview a UI component mockup in the browser UI Canvas: the user hand-edits, tests viewports, chats, and finishes with an exported design |
 | `/plan-prd` | Generate a lean, problem-first PRD and hand off to `/plan` for implementation planning |
 | `/feature-dev` | Guided feature development with codebase understanding and architecture focus |
 | `/code-review` | Code review — local uncommitted changes or GitHub PR (pass PR number/URL for PR mode) |
@@ -264,7 +265,7 @@ These slash commands were retired in favor of skills. The command files still ex
 | `/docs` | `documentation-lookup` |
 | `/claw` | `nanoclaw-repl` |
 | `/context-budget` | `context-budget` |
-| `/devfleet` | `claude-devfleet` |
+| `/devfleet` | `devfleet` |
 | `/orchestrate` | `dmux-workflows` and `autonomous-agent-harness` |
 | `/prompt-optimize` | `prompt-optimizer` |
 | `/rules-distill` | `rules-distill` |

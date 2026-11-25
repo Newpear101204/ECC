@@ -25,10 +25,29 @@ function readFileWithSharingRetry(filePath, options) {
   }
 }
 
+// Concurrent Windows writers (and real-time antivirus scans of each freshly
+// published file) can hold replacement sharing locks for well over a second.
+// Fixed-interval retries keep contenders in lockstep, so one writer can lose
+// every round until it gives up. Short, fully jittered waits break that
+// lockstep; longer (exponential) waits measurably starve the loser further.
+const DEFAULT_RENAME_RETRY_BUDGET_MS = 2000;
+const RENAME_RETRY_MIN_WAIT_MS = 5;
+const RENAME_RETRY_MAX_WAIT_MS = 25;
+
+function renameRetryWaitMs(remaining) {
+  const jittered = RENAME_RETRY_MIN_WAIT_MS
+    + Math.random() * (RENAME_RETRY_MAX_WAIT_MS - RENAME_RETRY_MIN_WAIT_MS);
+  return Math.min(remaining, jittered);
+}
+
 function renameAtomic(tempPath, resolvedPath, options) {
-  // Concurrent Windows installers can hold replacement sharing locks beyond
-  // the reader's shorter retry budget. Keep publication bounded to two seconds.
-  const deadline = performance.now() + 2000;
+  // Keep publication bounded by an elapsed budget (callers that are not on a
+  // latency-sensitive hook path may raise it). The attempt cap is only a
+  // safety net: size it for the shortest possible wait so it can never end
+  // retries before the elapsed budget does.
+  const budget = options.renameRetryBudgetMs || DEFAULT_RENAME_RETRY_BUDGET_MS;
+  const maxAttempts = Math.ceil(budget / RENAME_RETRY_MIN_WAIT_MS) + 1;
+  const deadline = performance.now() + budget;
   let attempts = 0;
   let sleeper;
   while (true) {
@@ -44,10 +63,19 @@ function renameAtomic(tempPath, resolvedPath, options) {
       const remaining = deadline - performance.now();
       if (process.platform !== 'win32'
         || !['EPERM', 'EACCES', 'EBUSY'].includes(error.code)
-        || attempts >= 81 || remaining <= 0) throw error;
+        || attempts >= maxAttempts || remaining <= 0) throw error;
       sleeper ||= new Int32Array(new SharedArrayBuffer(4));
-      Atomics.wait(sleeper, 0, 0, Math.min(25, remaining));
+      Atomics.wait(sleeper, 0, 0, renameRetryWaitMs(remaining));
     }
+  }
+}
+
+function readExistingFileMode(filePath) {
+  try {
+    return fs.statSync(filePath).mode & 0o777;
+  } catch (error) {
+    if (error.code === 'ENOENT') return undefined;
+    throw error;
   }
 }
 
@@ -66,9 +94,12 @@ function writeFileAtomic(filePath, content, options = {}) {
   let descriptor;
   try {
     if (options.validateParent) options.validateParent();
-    descriptor = fs.openSync(tempPath, 'wx', mode);
+    const existingMode = options.preserveExistingMode ? readExistingFileMode(resolvedPath) : undefined;
+    descriptor = fs.openSync(tempPath, 'wx', existingMode ?? mode);
     if (options.validateParent) options.validateParent();
     fs.writeFileSync(descriptor, content, { encoding: options.encoding || 'utf8' });
+    // Restore existing permissions after writing, without applying the process umask a second time.
+    if (existingMode !== undefined) fs.fchmodSync(descriptor, existingMode);
     fs.fsyncSync(descriptor);
     fs.closeSync(descriptor);
     descriptor = undefined;

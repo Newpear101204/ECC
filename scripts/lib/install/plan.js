@@ -7,8 +7,9 @@ const { execFileSync } = require('child_process');
 const { resolveInstallPlan } = require('../install-manifests');
 const { getInstallTargetAdapter } = require('../install-targets/registry');
 const { resolveInvocationEnvironment } = require('../invocation-environment');
-const { disableUnselectedOpenCodeHooks } = require('./hook-consent');
+const { disableUnselectedOpenCodeHooks, parseJsoncConfig } = require('./hook-consent');
 const { readHooksConfig } = require('../hooks-config');
+const { isPackageSourcePath, resolvePackageSourcePath } = require('./package-source');
 const {
   materializeManagedHooks,
 } = require('./claude-settings');
@@ -176,14 +177,18 @@ function materializeScaffoldOperation(sourceRoot, operation) {
         destinationPath: operation.destinationPath,
         strategy: operation.strategy || 'merge-json',
         ownership: operation.ownership || 'managed',
-        scaffoldOnly: Object.hasOwn(operation, 'scaffoldOnly') ? operation.scaffoldOnly : false,
-        mergePayload: readJsonObject(path.join(sourceRoot, operation.sourceRelativePath), operation.sourceRelativePath)
+        scaffoldOnly: typeof operation.scaffoldOnly === 'boolean' ? operation.scaffoldOnly : false,
+        mergePayload: operation.mergePayload !== undefined
+          ? JSON.parse(JSON.stringify(operation.mergePayload))
+          : readJsonObject(path.join(sourceRoot, operation.sourceRelativePath), operation.sourceRelativePath)
       }
     ];
   }
 
-  const sourcePath = path.join(sourceRoot, operation.sourceRelativePath);
-  if (!fs.existsSync(sourcePath)) {
+  const sourcePath = isPackageSourcePath(operation.sourceRelativePath)
+    ? resolvePackageSourcePath(sourceRoot, operation.sourceRelativePath)
+    : path.join(sourceRoot, operation.sourceRelativePath);
+  if (!sourcePath || !fs.existsSync(sourcePath)) {
     return [];
   }
 
@@ -258,10 +263,39 @@ function dedupeCopyFileOperations(operations) {
   });
 }
 
+function projectOpenCodeHomeInstructions(operations) {
+  const installedFiles = new Set(operations.filter(operation => operation.kind === 'copy-file')
+    .map(operation => operation.destinationPath));
+  return operations.map(operation => {
+    if (operation.contentTransform !== 'opencode-home-skills-path') return operation;
+    const { instructions } = parseJsoncConfig(
+      fs.readFileSync(operation.sourcePath, 'utf8'),
+      operation.sourceRelativePath
+    );
+    const configRoot = path.dirname(operation.destinationPath);
+    const opencodeHomeInstructions = (Array.isArray(instructions) ? instructions : [])
+      .map(instruction => path.resolve(configRoot, instruction))
+      .filter(instruction => installedFiles.has(instruction));
+    // Record the projection so repair uses the same profile-specific paths.
+    return { ...operation, opencodeHomeInstructions };
+  });
+}
+
 function createManifestInstallPlan(options = {}) {
-  const sourceRoot = options.sourceRoot || getSourceRoot();
+  const requestedSourceRoot = options.sourceRoot || getSourceRoot();
   const projectRoot = options.projectRoot || process.cwd();
   const target = options.target || 'claude';
+  const adapter = getInstallTargetAdapter(target);
+  const preparedSource = adapter.prepareSource({
+    sourceRoot: requestedSourceRoot,
+    repoRoot: requestedSourceRoot,
+    projectRoot,
+    homeDir: options.homeDir,
+    env: resolveInvocationEnvironment(options),
+    sourceUrl: options.sourceUrl || null,
+    sourceSha: options.sourceSha || null,
+  });
+  const sourceRoot = preparedSource.sourceRoot || requestedSourceRoot;
   const legacyLanguages = Array.isArray(options.legacyLanguages) ? [...options.legacyLanguages] : [];
   const requestProfileId = Object.hasOwn(options, 'requestProfileId') ? options.requestProfileId : options.profileId || null;
   const requestModuleIds = Object.hasOwn(options, 'requestModuleIds') ? [...options.requestModuleIds] : Array.isArray(options.moduleIds) ? [...options.moduleIds] : [];
@@ -286,8 +320,10 @@ function createManifestInstallPlan(options = {}) {
     excludeComponentIds: options.excludeComponentIds || [],
     target,
     exemptValidationCodes: options.exemptValidationCodes || [],
+    trust: options.trust === true,
+    consent: options.consent || {},
+    sourceSha: options.sourceSha || null,
   });
-  const adapter = getInstallTargetAdapter(target);
   const materializedOperations = plan.operations.flatMap(operation => (
     materializeScaffoldOperation(sourceRoot, operation)
   )).map(operation => {
@@ -302,16 +338,20 @@ function createManifestInstallPlan(options = {}) {
     return operation;
   });
   const ruleLanguages = Array.isArray(options.ruleLanguages) ? [...options.ruleLanguages] : [];
-  const operations = dedupeCopyFileOperations(
+  const dedupedOperations = dedupeCopyFileOperations(
     options.legacyMode && target === 'antigravity'
       ? materializedOperations.filter(operation => (
         isSelectedAntigravityLegacyRule(operation, ruleLanguages)
       ))
       : materializedOperations
   );
+  const operations = target === 'opencode'
+    ? projectOpenCodeHomeInstructions(dedupedOperations)
+    : dedupedOperations;
   const source = {
-    repoVersion: getPackageVersion(sourceRoot),
-    repoCommit: getRepoCommit(sourceRoot),
+    repoVersion: preparedSource.sourceVersion || getPackageVersion(sourceRoot),
+    repoUrl: preparedSource.sourceUrl || null,
+    repoCommit: preparedSource.sourceSha || getRepoCommit(sourceRoot),
     manifestVersion: getManifestVersion(sourceRoot)
   };
   const statePreview = createStatePreview({
@@ -324,7 +364,11 @@ function createManifestInstallPlan(options = {}) {
       includeComponents: requestIncludeComponentIds,
       excludeComponents: requestExcludeComponentIds,
       legacyLanguages,
-      legacyMode: Boolean(options.legacyMode)
+      legacyMode: Boolean(options.legacyMode),
+      trust: options.trust === true,
+      consentMcp: Object.entries(options.consent && options.consent.mcp || {})
+        .filter(([, allowed]) => allowed === true)
+        .map(([id]) => id),
     },
     resolution: {
       selectedModules: plan.selectedModuleIds,
@@ -334,7 +378,7 @@ function createManifestInstallPlan(options = {}) {
     source
   });
 
-  return disableUnselectedOpenCodeHooks({
+  const installPlan = disableUnselectedOpenCodeHooks({
     mode: options.mode || 'manifest',
     sourceRoot,
     target,
@@ -345,6 +389,7 @@ function createManifestInstallPlan(options = {}) {
     },
     homeDir: plan.homeDir,
     targetRoot: plan.targetRoot,
+    trustedRoots: plan.trustedRoots || (plan.targetRoot ? [plan.targetRoot] : []),
     installRoot: plan.targetRoot,
     installStatePath: plan.installStatePath,
     warnings: Array.isArray(options.warnings) ? [...options.warnings] : [],
@@ -361,6 +406,14 @@ function createManifestInstallPlan(options = {}) {
     operations,
     statePreview
   });
+  if (typeof preparedSource.cleanup === 'function') {
+    Object.defineProperty(installPlan, 'dispose', {
+      configurable: false,
+      enumerable: false,
+      value: preparedSource.cleanup,
+    });
+  }
+  return installPlan;
 }
 
 module.exports = {

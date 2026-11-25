@@ -6,6 +6,7 @@ This document lists each slash command and the primary agent(s) or skills it inv
 |---------|------------------|--------|
 | `/plan` | planner | Implementation planning before code |
 | `/plan-canvas` | — (skill: plan-canvas) | Browser review canvas for plan artifacts: annotate, chat, approve/request changes |
+| `/ui-canvas` | none (skill: ui-canvas) | Browser preview canvas for UI mockups: move, resize, edit, restyle, test viewports, Save and Finish |
 | `/tdd` | tdd-guide | Test-driven development |
 | `/code-review` | code-reviewer | Quality and security review |
 | `/issue-review` | — (skill: issue-review) | GitHub issue review: verify against the codebase, duplicates, prior fixes, severity, draft reply |
@@ -82,6 +83,7 @@ This document lists each slash command and the primary agent(s) or skills it inv
 
 | Skill | Purpose | Entry point |
 |-------|---------|-------------|
+| [ecc-contribution-review](../skills/ecc-contribution-review/SKILL.md) | Prepare a review packet for an ECC skill contribution from current repository observations | Invoke the skill, then verify every imported claim and evidence reference independently. |
 | [osint-investigation](../skills/osint-investigation/SKILL.md) | Public-source investigation methodology: competing hypotheses, falsification, visual verification, and evidence tracking | Invoke the self-contained skill directly using available host capabilities. |
 
 ## How to use this map

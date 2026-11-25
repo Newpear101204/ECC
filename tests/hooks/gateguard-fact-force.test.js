@@ -7,6 +7,10 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+// These assertions cover the opt-in human-operator hint text (#3844): the
+// default denial no longer names the env vars that disable the guard.
+process.env.ECC_SHOW_RECOVERY_HINTS = '1';
+
 const runner = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'run-with-flags.js');
 const hookScript = path.join(__dirname, '..', '..', 'scripts', 'hooks', 'gateguard-fact-force.js');
 const externalStateDir = process.env.GATEGUARD_STATE_DIR;
@@ -726,6 +730,51 @@ function runDdRegressionTests() {
         });
       }
     }
+    // #2832: find execs its action argv directly, so a wrapper or a nested
+    // shell there runs rm/Git exactly like a bare `-exec rm {} \;`.
+    const findExecWrappedDestructive = [
+      'find . -exec sudo rm {} \\;',
+      'find . -exec doas rm {} \\;',
+      'find . -exec sudo -u root rm -rf {} \\;',
+      'find . -exec sudo git reset --hard \\;',
+      'find . -execdir sudo rm {} \\;',
+      'find . -ok doas rm {} \\;',
+      'find . -exec timeout 5m rm -rf {} \\;',
+      'find . -exec setsid rm -rf {} +',
+      'find . -exec env FOO=1 rm -rf {} +',
+      'find . -exec nice -n 5 rm -rf {} +',
+      'sudo find . -exec rm {} \\;',
+      'timeout 5 find . -exec rm -rf {} +',
+      "find . -exec sh -c 'rm -rf {}' \\;",
+      'find . -exec bash -c "rm -rf /important/data" \\;',
+      'find . -exec sh -ec "rm -rf {}" +',
+      'find . -exec sh -o errexit -c "rm -rf {}" \\;',
+      'find . -exec sh -c "git reset --hard" \\;',
+      "find . -exec sudo sh -c 'rm -rf {}' \\;",
+      "find . -exec timeout 5 sh -c 'rm -rf {}' \\;",
+      "find . -exec su -c 'rm -rf /important/data' \\;"
+    ];
+    const findExecWrappedPassive = [
+      'find . -exec sudo chmod 644 {} \\;',
+      'find . -exec sudo git status \\;',
+      'find . -exec sudo -l rm -rf {} \\;',
+      'find . -exec echo sudo rm -rf {} \\;',
+      'find . -exec timeout 5 echo rm -rf {} \\;',
+      "find . -exec sh -c 'echo rm -rf {}' \\;",
+      'find . -exec sh -c "npm test" \\;',
+      "find . -name 'sudo rm -rf' -print",
+      'sudo find . -name "*.log" -exec ls {} \\;'
+    ];
+    for (const [commands, expected] of [
+      [findExecWrappedDestructive, ['gateguard.bash-compatible-destructive']],
+      [findExecWrappedPassive, []]
+    ]) {
+      for (const command of commands) {
+        check(`find -exec wrapper classification: ${JSON.stringify(command)}`, () => {
+          assert.deepStrictEqual(hook.classifyDestructiveCommand('Bash', command), expected);
+        });
+      }
+    }
     for (const [command, denied] of [
       ['sudo -u root dd if=input', true],
       ["sh -c 'echo $(dd if=input)'", true],
@@ -734,7 +783,10 @@ function runDdRegressionTests() {
       ['find . -exec echo {} \\; -exec dd if=input \\;', true],
       ['command -pv dd', false],
       ["timeout 2 sh -c 'dd if=input'", true],
-      ['cat /dev/zero | dd of=/dev/sda', true]
+      ['cat /dev/zero | dd of=/dev/sda', true],
+      ['find . -exec sudo rm -rf {} \\;', true],
+      ["find . -exec sh -c 'rm -rf {}' +", true],
+      ['find . -exec sudo chmod 644 {} \\;', false]
     ]) {
       check(`dd hook-input contract: ${command}`, () => {
         fs.rmSync(stateDir, { recursive: true, force: true });
@@ -1513,22 +1565,20 @@ function runTests() {
     passed++;
   else failed++;
 
-  // --- Test 16: allows Claude settings edits so the hook can be disabled safely ---
+  // --- Test 16: .claude/settings*.json is gated like any other first touch (#3845) ---
   clearState();
   if (
-    test('allows edits to .claude/settings.json without gating', () => {
+    test('gates first-touch edits to .claude/settings.json', () => {
       const input = {
         tool_name: 'Edit',
         tool_input: { file_path: '/workspace/app/.claude/settings.json', old_string: '{}', new_string: '{"hooks":[]}' }
       };
-      const result = runHook(input);
+      const result = runHook(input, { GATEGUARD_EXEMPT_GLOBS: '' });
       const output = parseOutput(result.stdout);
       assert.ok(output, 'should produce valid JSON output');
-      if (output.hookSpecificOutput) {
-        assert.notStrictEqual(output.hookSpecificOutput.permissionDecision, 'deny', 'settings edits must not be blocked by gateguard');
-      } else {
-        assert.strictEqual(output.tool_name, 'Edit');
-      }
+      assert.ok(output.hookSpecificOutput, 'the settings file must not bypass the gate');
+      assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+      assert.ok(output.hookSpecificOutput.permissionDecisionReason.includes('Fact-Forcing Gate'));
     })
   )
     passed++;
@@ -2025,6 +2075,36 @@ function runTests() {
     passed++;
   else failed++;
 
+  // --- Test 33a: settings files stay gated on subagent Edit/Write/MultiEdit (#3862) ---
+  clearState();
+  if (
+    test('subagent settings edits stay gated on every edit tool', () => {
+      const env = { CLAUDE_SESSION_ID: '', ECC_SESSION_ID: '', GATEGUARD_EXEMPT_GLOBS: '' };
+      const settingsPaths = ['/workspace/app/.claude/settings.json', '/workspace/app/.claude/settings.local.json'];
+
+      for (const filePath of settingsPaths) {
+        const edits = [{ file_path: filePath, old_string: '{}', new_string: '{"hooks":[]}' }];
+        const cases = [
+          { tool_name: 'MultiEdit', tool_input: { edits } },
+          { tool_name: 'Edit', tool_input: { ...edits[0] } },
+          { tool_name: 'Write', tool_input: { file_path: filePath, content: '{"hooks":[]}' } }
+        ];
+        for (const toolInput of cases) {
+          clearState();
+          const result = runHook(
+            { ...toolInput, session_id: 'subagent-fresh-session', agent_id: 'agent-abc-123' },
+            env
+          );
+          const output = parseOutput(result.stdout);
+          assert.ok(output && output.hookSpecificOutput, `${toolInput.tool_name} ${filePath} must be denied`);
+          assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+        }
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
   // --- Test 33: Bash stays gated inside subagents ---
   clearState();
   if (
@@ -2243,6 +2323,41 @@ function runTests() {
       expectDestructiveDeny("psql -c 'truncate audit_log'", 'psql quoted truncate');
       expectDestructiveDeny('mysql -e "delete from sessions"', 'mysql quoted delete');
       expectDestructiveDeny('sqlite3 app.db "DROP TABLE users"', 'sqlite3 quoted drop');
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('denies DROP DATABASE, DROP SCHEMA and ALTER TABLE ... DROP COLUMN passed to SQL clients', () => {
+      // Each of these destroys at least as much data as DROP TABLE.
+      expectDestructiveDeny('psql -c "DROP DATABASE prod"', 'psql drop database');
+      expectDestructiveDeny('psql -c "drop database if exists app_dev"', 'psql drop database if exists');
+      expectDestructiveDeny('mysql -e "DROP DATABASE app"', 'mysql drop database');
+      expectDestructiveDeny('psql -c "DROP SCHEMA public CASCADE"', 'psql drop schema cascade');
+      expectDestructiveDeny('mysql -e "DROP SCHEMA app"', 'mysql drop schema');
+      expectDestructiveDeny('psql -c "ALTER TABLE users DROP COLUMN email"', 'psql alter table drop column');
+      expectDestructiveDeny(
+        'psql -c "ALTER TABLE IF EXISTS ONLY public.users DROP COLUMN IF EXISTS email CASCADE"',
+        'psql alter table if exists only drop column'
+      );
+      expectDestructiveDeny('sqlite3 app.db "ALTER TABLE users DROP COLUMN email"', 'sqlite3 drop column');
+      expectDestructiveDeny('sudo -u postgres psql -c "drop database prod"', 'sudo psql drop database');
+      expectDestructiveDeny('psql -c "drop database prod"; echo done', 'drop database before a separator');
+    })
+  )
+    passed++;
+  else failed++;
+
+  if (
+    test('allows non-destructive ALTER TABLE forms and quoted DROP DATABASE mentions', () => {
+      expectAllow('psql -c "ALTER TABLE users ALTER COLUMN email DROP DEFAULT"', 'alter column drop default');
+      expectAllow('psql -c "ALTER TABLE users ALTER COLUMN email DROP NOT NULL"', 'alter column drop not null');
+      expectAllow('psql -c "ALTER TABLE users ADD COLUMN note text"', 'alter table add column');
+      expectAllow('psql -c "ALTER TABLE users ADD COLUMN note text; SELECT \'drop column\'"', 'drop column in a literal');
+      expectAllow('psql -c "SELECT \'drop database\' AS label"', 'drop database in a literal');
+      expectAllow('git commit -m "docs: explain drop database recovery"', 'drop database in -m');
+      expectAllow('echo "drop schema public cascade"', 'echo drop schema mention');
     })
   )
     passed++;
@@ -4346,6 +4461,176 @@ function runTests() {
   )
     passed++;
   else failed++;
+
+  // --- Same-batch siblings (#3936): when the denied call's batch is found ---
+  // by its tool_use_id, the other edits to that file in the same batch are
+  // denied too, so the file is not left half-edited. The retry from a later
+  // message passes. Without a located batch, the #3136 behavior holds.
+  {
+    const batchDir = fs.mkdtempSync(path.join(tmpRoot, 'gateguard-batch-'));
+    const batchEnv = { CLAUDE_PROJECT_DIR: '/proj-batch', CLAUDE_TRANSCRIPT_PATH: '' };
+    let batchSeq = 0;
+    const userText = text => ({ type: 'user', message: { role: 'user', content: text } });
+    const assistantCalls = (messageId, calls) => ({
+      type: 'assistant',
+      message: { id: messageId, role: 'assistant', content: calls.map(([id, name, input]) => ({ type: 'tool_use', id, name, input })) }
+    });
+    const deniedResults = ids => ({
+      type: 'user',
+      message: { role: 'user', content: ids.map(id => ({ type: 'tool_result', tool_use_id: id, is_error: true, content: 'denied' })) }
+    });
+    const writeBatchTranscript = records => {
+      batchSeq += 1;
+      const file = path.join(batchDir, `batch-${batchSeq}.jsonl`);
+      fs.writeFileSync(file, records.map(r => JSON.stringify(r)).join('\n') + '\n', 'utf8');
+      return file;
+    };
+    const editInput = (file_path, old_string) => ({ file_path, old_string, new_string: `${old_string}2` });
+    const batchRun = (toolName, toolInput, transcriptPath, toolUseId) => {
+      const payload = { tool_name: toolName, tool_input: toolInput, cwd: '/proj-batch' };
+      if (transcriptPath) payload.transcript_path = transcriptPath;
+      if (toolUseId) payload.tool_use_id = toolUseId;
+      const output = parseOutput(runHook(payload, batchEnv).stdout);
+      const hso = output && output.hookSpecificOutput ? output.hookSpecificOutput : {};
+      return { decision: hso.permissionDecision, reason: hso.permissionDecisionReason || '' };
+    };
+    const readBatchState = () => JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    const batchCase = (name, fn) => {
+      clearState();
+      if (test(name, fn)) passed++;
+      else failed++;
+    };
+    const target = '/proj-batch/src/table.js';
+
+    batchCase('same-batch sibling of a first-touch denial is denied; the retry passes (#3936)', () => {
+      const batch = [
+        ['toolu_tbl_a', 'Edit', editInput(target, 'head')],
+        ['toolu_tbl_b', 'Edit', editInput(target, 'body')]
+      ];
+      const t = writeBatchTranscript([userText('fix the table'), assistantCalls('msg_tbl_1', batch)]);
+
+      const first = batchRun('Edit', batch[0][2], t, 'toolu_tbl_a');
+      assert.strictEqual(first.decision, 'deny', 'first touch is denied');
+      assert.ok(first.reason.includes(`Other edits to ${target} from this batch are denied too`), `locked note expected, got: ${first.reason}`);
+      assert.ok(first.reason.includes('may already have been applied'), 'locked denial still requires re-reading earlier edits');
+      assert.ok(!first.reason.includes('file is unchanged'), 'a lock cannot prove no earlier sibling applied');
+
+      const sibling = batchRun('Edit', batch[1][2], t, 'toolu_tbl_b');
+      assert.strictEqual(sibling.decision, 'deny', 'same-batch sibling is denied');
+      assert.ok(sibling.reason.includes('in this same batch was denied at first touch'), sibling.reason);
+      assert.ok(sibling.reason.includes(target), 'sibling denial names the file');
+      assert.strictEqual(readBatchState().fact_force_denials, 1, 'a same-batch denial is not a new first-touch denial');
+
+      const retryBatch = [
+        ['toolu_tbl_c', 'Edit', editInput(target, 'head')],
+        ['toolu_tbl_d', 'Edit', editInput(target, 'body')]
+      ];
+      const later = writeBatchTranscript([
+        userText('fix the table'),
+        assistantCalls('msg_tbl_1', batch),
+        deniedResults(['toolu_tbl_a', 'toolu_tbl_b']),
+        assistantCalls('msg_tbl_2', retryBatch)
+      ]);
+      assert.notStrictEqual(batchRun('Edit', retryBatch[0][2], later, 'toolu_tbl_c').decision, 'deny', 'retry from a later message passes');
+      assert.notStrictEqual(batchRun('Edit', retryBatch[1][2], later, 'toolu_tbl_d').decision, 'deny', 'resent sibling passes');
+      assert.strictEqual(readBatchState().fact_force_denials, 1, 'still one denial');
+    });
+
+    batchCase('one record per tool_use with a shared message id is one batch (#3936)', () => {
+      const a = ['toolu_split_a', 'Edit', editInput(target, 'x')];
+      const b = ['toolu_split_b', 'Edit', editInput(target, 'y')];
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_split', [a]), assistantCalls('msg_split', [b])]);
+      assert.strictEqual(batchRun('Edit', a[2], t, a[0]).decision, 'deny');
+      assert.strictEqual(batchRun('Edit', b[2], t, b[0]).decision, 'deny', 'sibling in a separate record of the same message is denied');
+    });
+
+    batchCase('the lock is per file: another file in the same batch gets its own first-touch gate (#3936)', () => {
+      const other = '/proj-batch/src/other.js';
+      const batch = [
+        ['toolu_pf_a', 'Edit', editInput(target, 'x')],
+        ['toolu_pf_b', 'Edit', editInput(other, 'y')]
+      ];
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_pf', batch)]);
+      assert.strictEqual(batchRun('Edit', batch[0][2], t, batch[0][0]).decision, 'deny');
+      const second = batchRun('Edit', batch[1][2], t, batch[1][0]);
+      assert.strictEqual(second.decision, 'deny', 'other file is gated on its own first touch');
+      assert.ok(!second.reason.includes('in this same batch was denied'), 'not a same-batch denial');
+      assert.strictEqual(readBatchState().fact_force_denials, 2);
+    });
+
+    batchCase('no located batch keeps the #3136 behavior: siblings pass (#3936)', () => {
+      const batch = [
+        ['toolu_nl_a', 'Edit', editInput(target, 'x')],
+        ['toolu_nl_b', 'Edit', editInput(target, 'y')]
+      ];
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_nl', batch)]);
+      // No tool_use_id on either call.
+      const first = batchRun('Edit', batch[0][2], t, '');
+      assert.strictEqual(first.decision, 'deny');
+      assert.ok(first.reason.includes('may already have been applied'), 'unlocked denial keeps the partial-application warning');
+      assert.notStrictEqual(batchRun('Edit', batch[1][2], t, '').decision, 'deny', 'sibling without tool_use_id passes');
+      assert.ok(!('batch_locks' in readBatchState()) || Object.keys(readBatchState().batch_locks).length === 0, 'nothing locked');
+
+      clearState();
+      // tool_use_id given but the pending call is not in the transcript yet.
+      const stale = writeBatchTranscript([userText('go')]);
+      assert.strictEqual(batchRun('Edit', batch[0][2], stale, 'toolu_nl_a').decision, 'deny');
+      assert.notStrictEqual(batchRun('Edit', batch[1][2], stale, 'toolu_nl_b').decision, 'deny', 'unlocated sibling passes');
+    });
+
+    batchCase('MultiEdit and NotebookEdit siblings of a locked file are denied (#3936)', () => {
+      const notebook = '/proj-batch/nb/analysis.ipynb';
+      const batch = [
+        ['toolu_me_a', 'Edit', editInput(target, 'x')],
+        ['toolu_me_b', 'MultiEdit', { edits: [editInput(target, 'y')] }],
+        ['toolu_me_c', 'NotebookEdit', { notebook_path: notebook, new_source: 'x' }],
+        ['toolu_me_d', 'NotebookEdit', { notebook_path: notebook, new_source: 'y' }]
+      ];
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_me', batch)]);
+      assert.strictEqual(batchRun('Edit', batch[0][2], t, batch[0][0]).decision, 'deny');
+      const multi = batchRun('MultiEdit', batch[1][2], t, batch[1][0]);
+      assert.strictEqual(multi.decision, 'deny', 'MultiEdit entry for the locked file is denied');
+      assert.ok(multi.reason.includes('in this same batch was denied'), multi.reason);
+      assert.strictEqual(batchRun('NotebookEdit', batch[2][2], t, batch[2][0]).decision, 'deny', 'notebook first touch');
+      assert.strictEqual(batchRun('NotebookEdit', batch[3][2], t, batch[3][0]).decision, 'deny', 'notebook sibling denied');
+    });
+
+    batchCase('a Write sibling of a denied Write in the same batch is denied (#3936)', () => {
+      const created = '/proj-batch/src/new-module.js';
+      const batch = [
+        ['toolu_w_a', 'Write', { file_path: created, content: 'a' }],
+        ['toolu_w_b', 'Edit', editInput(created, 'a')]
+      ];
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_w', batch)]);
+      const first = batchRun('Write', batch[0][2], t, batch[0][0]);
+      assert.strictEqual(first.decision, 'deny');
+      assert.ok(first.reason.includes('are denied too'), first.reason);
+      assert.strictEqual(batchRun('Edit', batch[1][2], t, batch[1][0]).decision, 'deny');
+    });
+
+    batchCase('condensed denial carries the locked note on one line (#3936)', () => {
+      writeState({ checked: [], last_active: Date.now(), fact_force_denials: 3 });
+      const a = ['toolu_cd_a', 'Edit', editInput(target, 'x')];
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_cd', [a])]);
+      const out = batchRun('Edit', a[2], t, a[0]);
+      assert.strictEqual(out.decision, 'deny');
+      assert.ok(out.reason.includes('are denied too'), out.reason);
+      assert.ok(!out.reason.includes('\n'), 'condensed denial stays a single line');
+    });
+
+    batchCase('malformed batch_locks in the state file are ignored (#3936)', () => {
+      const key = stateKey(target);
+      const t = writeBatchTranscript([userText('go'), assistantCalls('msg_bad', [['toolu_bad', 'Edit', editInput(target, 'x')]])]);
+      for (const bad of [{ batch: 5, at: 1 }, { batch: '', at: 1 }, { batch: 'msg_bad' }, 'msg_bad', null]) {
+        writeState({ checked: [key], last_active: Date.now(), fact_force_denials: 1, batch_locks: { [key]: bad } });
+        assert.notStrictEqual(batchRun('Edit', editInput(target, 'x'), t, 'toolu_bad').decision, 'deny', `ignored: ${JSON.stringify(bad)}`);
+      }
+      writeState({ checked: [key], last_active: Date.now(), fact_force_denials: 1, batch_locks: JSON.parse('{"__proto__":{"batch":"msg_bad","at":1}}') });
+      assert.notStrictEqual(batchRun('Edit', editInput(target, 'x'), t, 'toolu_bad').decision, 'deny', 'prototype key ignored');
+    });
+
+    fs.rmSync(batchDir, { recursive: true, force: true });
+  }
 
   // --- Canonical checked-path keys ---
   const decisionOf = result => {
@@ -7689,6 +7974,63 @@ function runTests() {
     if (test(`lazy loading: ${label}`, () => assert.deepStrictEqual(loadedLibs(payload, setup), expected))) passed++;
     else failed++;
   }
+
+  // --- Test N: the default denial never names the controls that disable the hook (#3844) ---
+  clearState();
+  if (
+    test('default denial does not name recovery bypass controls', () => {
+      const input = {
+        session_id: TEST_SESSION_ID,
+        tool_name: 'Edit',
+        tool_input: { file_path: '/workspace/app/src/recovery-hint.js', old_string: 'a', new_string: 'b' }
+      };
+      const result = runHook(input, { ECC_SHOW_RECOVERY_HINTS: '' });
+      const output = parseOutput(result.stdout);
+      assert.ok(output && output.hookSpecificOutput, 'expected a denial');
+      assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+      const reason = output.hookSpecificOutput.permissionDecisionReason;
+      for (const leaked of [
+        'ECC_GATEGUARD=off',
+        'ECC_DISABLED_HOOKS',
+        'GATEGUARD_EXEMPT_GLOBS',
+        'GATEGUARD_BASH_ROUTINE_DISABLED'
+      ]) {
+        assert.ok(!reason.includes(leaked), `default denial must not name ${leaked}`);
+      }
+    })
+  )
+    passed++;
+  else failed++;
+
+  clearState();
+  writeState({ checked: [], last_active: Date.now(), fact_force_denials: 3 });
+  if (
+    test('condensed default denial omits recovery markers and bypass controls', () => {
+      const input = {
+        session_id: TEST_SESSION_ID,
+        tool_name: 'Edit',
+        tool_input: { file_path: '/workspace/app/src/recovery-condensed.js', old_string: 'a', new_string: 'b' }
+      };
+      const result = runHook(input, { ECC_SHOW_RECOVERY_HINTS: '' });
+      const output = parseOutput(result.stdout);
+      assert.ok(output && output.hookSpecificOutput, 'expected the condensed denial');
+      assert.strictEqual(output.hookSpecificOutput.permissionDecision, 'deny');
+      const reason = output.hookSpecificOutput.permissionDecisionReason;
+      assert.ok(reason.includes('denial #4'), 'expected the condensed denial ordinal');
+      for (const leaked of [
+        'Narrow recovery:',
+        'Recovery:',
+        'ECC_GATEGUARD=off',
+        'ECC_DISABLED_HOOKS',
+        'GATEGUARD_EXEMPT_GLOBS',
+        'GATEGUARD_BASH_ROUTINE_DISABLED'
+      ]) {
+        assert.ok(!reason.includes(leaked), `condensed default denial must not contain ${leaked}`);
+      }
+    })
+  )
+    passed++;
+  else failed++;
 
   const ddResults = runDdRegressionTests();
   passed += ddResults.passed;

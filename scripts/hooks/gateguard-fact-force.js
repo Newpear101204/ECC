@@ -25,6 +25,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { showRecoveryHints } = require('../lib/hooks/recovery-hints');
 const { extractCommandSubstitutions, extractSubshellGroups, extractBraceGroups } = require('../lib/shell-substitution');
 const { classifyPowerShellDestructiveCommand } = require('../lib/powershell-destructive-command');
 const { stripHeredocBodies } = require('./gateguard-heredoc');
@@ -85,7 +86,10 @@ const {
   dirGateKey,
   getDirGates,
   mergeDirGates,
-  capDirGates
+  capDirGates,
+  getBatchLocks,
+  mergeBatchLocks,
+  capBatchLocks
 } = require('../lib/gateguard-state');
 
 // Session state — scoped per session to avoid cross-session races.
@@ -123,7 +127,13 @@ const ECC_ENABLE_VALUES = new Set(['1', 'true', 'on', 'enabled', 'enable', 'yes'
 // `echo dd if=x` — which runs no dd at all — was gated. The boundary decided
 // the verdict instead of the command position, so dd moved to isDestructiveDd()
 // alongside the other token-based detectors (#2642).
-const DESTRUCTIVE_SQL = /\b(drop\s+table|delete\s+from|truncate)\b/i;
+// DROP DATABASE / DROP SCHEMA remove at least as much data as DROP TABLE, and
+// ALTER TABLE ... DROP COLUMN discards a column's data across every row. The
+// DROP COLUMN arm is bounded by `;` so it cannot join two separate statements,
+// and it requires the explicit COLUMN keyword so `ALTER COLUMN ... DROP
+// DEFAULT` / `DROP NOT NULL` (metadata-only changes) stay passive.
+const DESTRUCTIVE_SQL =
+  /\b(drop\s+(?:table|database|schema)|delete\s+from|truncate|alter\s+table\b[^;]*?\bdrop\s+column)\b/i;
 
 // Operator-supplied additional destructive patterns. Lazily compiled from
 // `GATEGUARD_BASH_EXTRA_DESTRUCTIVE` (regex source) on first use, then
@@ -1044,22 +1054,35 @@ function isDestructiveQuoteAware(raw, depth = 0) {
       if (isDestructiveSqlClient(tokens)) return true;
       if (isDestructiveFindExec(tokens)) return true;
       const argv = unwrapLeadWrappers(tokens, true, true);
-      const base = commandBasename(argv[0]);
-      if (SHELL_WRAPPERS.has(base)) {
-        // `-c`, or a short-option cluster that includes it (`-lc`, `-ec`).
-        const ci = argv.findIndex((arg, i) => i > 0 && /^-[A-Za-z]*c[A-Za-z]*$/.test(arg));
-        if (ci !== -1 && argv[ci + 1] && isDestructiveQuoteAware(argv[ci + 1], depth + 1)) {
-          return true;
-        }
-      }
-      if (base === 'su') {
-        for (const commandLine of suCommandLines(argv)) {
+      // `sudo find . -exec rm {} \;` runs the same actions as a bare find.
+      if (isDestructiveFindExec(argv)) return true;
+      // A shell that find -exec starts runs its -c text like any other.
+      const execShells = findExecArgvs(argv).map(exec => unwrapLeadWrappers(exec, false, true));
+      for (const shellArgv of [argv, ...execShells]) {
+        for (const commandLine of nestedShellCommandLines(shellArgv)) {
           if (isDestructiveQuoteAware(commandLine, depth + 1)) return true;
         }
       }
     }
   }
   return false;
+}
+
+/**
+ * Command text a resolved argv hands to a nested shell: the `-c` operand of
+ * sh/bash/zsh/dash/ksh (also inside a cluster such as `-lc` or `-ec`), or every
+ * command line of `su`.
+ *
+ * @param {string[]} argv
+ * @returns {string[]}
+ */
+function nestedShellCommandLines(argv) {
+  const base = commandBasename(argv[0]);
+  if (SHELL_WRAPPERS.has(base)) {
+    const ci = argv.findIndex((arg, i) => i > 0 && /^-[A-Za-z]*c[A-Za-z]*$/.test(arg));
+    return ci !== -1 && argv[ci + 1] ? [argv[ci + 1]] : [];
+  }
+  return base === 'su' ? suCommandLines(argv) : [];
 }
 
 /**
@@ -1434,8 +1457,19 @@ const FIND_EXEC_ACTIONS = new Set(['-exec', '-execdir', '-ok', '-okdir']);
 function isDestructiveFindExec(command) {
   const quoteAware = Array.isArray(command);
   const tokens = quoteAware ? command : tokenize(String(command || '').trim());
-  if (commandBasename(tokens[0]) !== 'find') return false;
+  return findExecArgvs(tokens).some(argv => isDestructiveFindExecArgv(argv, quoteAware));
+}
 
+/**
+ * The argv of every executable action of one find invocation, or [] when the
+ * tokens are not a find command.
+ *
+ * @param {string[]} tokens
+ * @returns {string[][]}
+ */
+function findExecArgvs(tokens) {
+  if (commandBasename(tokens[0]) !== 'find') return [];
+  const actions = [];
   for (let index = 1; index < tokens.length; index += 1) {
     const action = tokens[index];
     if (action === '-fprintf') {
@@ -1449,9 +1483,9 @@ function isDestructiveFindExec(command) {
     if (!FIND_EXEC_ACTIONS.has(action)) continue;
     const exec = readFindExecArgv(tokens, index + 1, action);
     index = exec.index;
-    if (exec.argv.length && isDestructiveFindExecArgv(exec.argv, quoteAware)) return true;
+    if (exec.argv.length) actions.push(exec.argv);
   }
-  return false;
+  return actions;
 }
 
 // Collect the argv of one find action starting at `start`. Returns the argv
@@ -1472,10 +1506,21 @@ function readFindExecArgv(tokens, start, action) {
 
 function isDestructiveFindExecArgv(argv, quoteAware) {
   // The legacy raw fallback can split quoted prose into apparent actions.
-  // Preserve its old rm/Git coverage, but classify dd only from real argv.
+  // Preserve its old rm/Git coverage, but classify dd and wrappers only from
+  // real argv.
   if (quoteAware && isDestructiveDd(argv, false)) return true;
+  if (isDestructiveFindExecCommand(argv)) return true;
+  if (!quoteAware) return false;
+  // find execs argv directly, so `-exec sudo rm {} \;` and
+  // `-exec timeout 5 rm {} \;` run rm just as `-exec rm {} \;` does (#2832).
+  // Shell builtins do not apply: find never runs `command` or `exec` itself.
+  const resolved = unwrapLeadWrappers(argv, false, true);
+  return resolved.length > 0 && isDestructiveFindExecCommand(resolved);
+}
+
+// Preserve main's existing find rm/rmdir/unlink and git-reset handling.
+function isDestructiveFindExecCommand(argv) {
   const baseCmd = commandBasename(argv[0]);
-  // Preserve main's existing rm/rmdir/unlink and git-reset handling.
   if (baseCmd === 'rm' || baseCmd === 'rmdir' || baseCmd === 'unlink') return true;
   if (baseCmd !== 'git') return false;
   const sub = findGitSubcommand(argv);
@@ -1668,6 +1713,7 @@ function saveState(state) {
     let mergedDenials = getDenialCount(state);
     let mergedCredited = getCreditedCount(state);
     let mergedDirGates = getDirGates(state);
+    let mergedBatchLocks = getBatchLocks(state);
     let mergedDenialsByClass = getClassCounts(state, 'denials_by_class');
     let mergedCreditedByClass = getClassCounts(state, 'credited_by_class');
     let mergedSiblingAllows = getSiblingAllowCount(state);
@@ -1687,6 +1733,7 @@ function saveState(state) {
         mergedDenials = Math.max(mergedDenials, getDenialCount(diskState));
         mergedCredited = Math.max(mergedCredited, getCreditedCount(diskState));
         mergedDirGates = mergeDirGates(getDirGates(diskState), mergedDirGates);
+        mergedBatchLocks = mergeBatchLocks(getBatchLocks(diskState), mergedBatchLocks);
         mergedDenialsByClass = mergeClassCounts(getClassCounts(diskState, 'denials_by_class'), mergedDenialsByClass);
         mergedCreditedByClass = mergeClassCounts(getClassCounts(diskState, 'credited_by_class'), mergedCreditedByClass);
         mergedSiblingAllows = Math.max(mergedSiblingAllows, getSiblingAllowCount(diskState));
@@ -1704,6 +1751,7 @@ function saveState(state) {
       fact_force_denials: mergedDenials,
       fact_force_credited: mergedCredited,
       dir_gates: capDirGates(mergedDirGates),
+      batch_locks: capBatchLocks(mergedBatchLocks),
       denials_by_class: mergedDenialsByClass,
       credited_by_class: mergedCreditedByClass,
       sibling_allows: mergedSiblingAllows,
@@ -1815,7 +1863,7 @@ function markCheckedWith(key, update) {
   return { ok: saveState(state), value };
 }
 
-function markCheckedAndCountDenial(key, { cls, dirGate, cap = Number.POSITIVE_INFINITY } = {}) {
+function markCheckedAndCountDenial(key, { cls, dirGate, batchId = null, cap = Number.POSITIVE_INFINITY } = {}) {
   const { ok, value: denials } = markCheckedWith(key, state => {
     if (getDenialCount(state) >= cap) {
       return { state: { ...state, cap_allows: getCapAllowCount(state) + 1 }, value: null };
@@ -1827,7 +1875,8 @@ function markCheckedAndCountDenial(key, { cls, dirGate, cap = Number.POSITIVE_IN
       ...(cls ? { denials_by_class: incrementClassCount(getClassCounts(state, 'denials_by_class'), cls) } : {}),
       ...(dirGate
         ? { dir_gates: withEntry(getDirGates(state), dirGate.key, { turn: dirGate.turn || null, at: Date.now(), first: dirGate.first, ordinal }) }
-        : {})
+        : {}),
+      ...(batchId ? { batch_locks: withEntry(getBatchLocks(state), key, { batch: batchId, at: Date.now() }) } : {})
     };
     return { state: next, value: ordinal };
   });
@@ -2010,12 +2059,6 @@ function normalizeForMatch(value) {
     .toLowerCase();
 }
 
-function isClaudeSettingsPath(filePath) {
-  const normalized = normalizeForMatch(filePath);
-  return /(^|\/)\.claude\/settings(?:\.[^/]+)?\.json$/.test(normalized);
-}
-
-
 function isReadOnlyGitIntrospection(command) {
   const trimmed = String(command || '').trim();
   if (!trimmed || /[\r\n;&|><`$()]/.test(trimmed)) return false;
@@ -2059,17 +2102,34 @@ const READ_ONLY_GIT_SUBCOMMANDS = new Map([
 // --- Gate messages ---
 
 /**
- * Batch-consistency warning (#3136). A first-touch denial marks the file
- * checked so the retry passes; a parallel batch of edits to one
- * not-yet-touched file therefore partially applies (first call denied,
- * siblings allowed). Hooks see calls one at a time and cannot lock a
- * batch, so the denial must say this out loud: name the file and tell
- * the agent that siblings may already have been applied.
+ * Batch-consistency note (#3136, #3936). A first-touch denial marks the
+ * file checked so the retry passes. When the pending call's batch is found
+ * in the transcript, the denial also locks the file for that batch, so the
+ * later siblings are denied too (`locked`), but earlier allowed edits are
+ * never rolled back. Otherwise
+ * the hook cannot tell siblings from the retry, so the denial says out
+ * loud that siblings may already have been applied.
+ * see docs/gateguard/design-notes.md#same-batch-siblings
  */
-function batchSiblingWarning(safePath) {
+function batchSiblingWarning(safePath, locked = false) {
+  if (locked) {
+    return (
+      `Other edits to ${safePath} from this batch are denied too. Earlier edits may already have been applied. ` +
+      'Re-read the file and resend every denied edit with the retry.'
+    );
+  }
   return (
     `If this call was sent in a parallel batch, other edits to ${safePath} from that batch ` +
     'may already have been applied. Re-read the file before building on them.'
+  );
+}
+
+function sameBatchGateMsg(filePath) {
+  const safe = sanitizePath(filePath);
+  return (
+    `[Fact-Forcing Gate] An earlier edit to ${safe} in this same batch was denied at first touch, ` +
+    `so this one is denied too. Earlier edits may already have been applied. ` +
+    'Re-read the file, present the facts that denial asked for, then resend every denied edit to this file from this batch.'
   );
 }
 
@@ -2078,7 +2138,7 @@ function questionOptions() {
   return { externalContract: ECC_ENABLE_VALUES.has(normalizeEnvValue(process.env.GATEGUARD_EXTERNAL_CONTRACT_QUESTION)) };
 }
 
-function firstTouchGateMsg(filePath, isWrite, cls, profile) {
+function firstTouchGateMsg(filePath, isWrite, cls, profile, locked = false) {
   const safe = sanitizePath(filePath);
   const questions = questionIdsFor(cls, isWrite, profile, questionOptions()).map(questionText);
   return [
@@ -2088,7 +2148,7 @@ function firstTouchGateMsg(filePath, isWrite, cls, profile) {
     '',
     ...questions.map((question, index) => `${index + 1}. ${question}`),
     '',
-    batchSiblingWarning(safe),
+    batchSiblingWarning(safe, locked),
     '',
     'Present the facts, then retry the same operation.'
   ].join('\n');
@@ -2099,16 +2159,18 @@ function firstTouchGateMsg(filePath, isWrite, cls, profile) {
  * (#2142). Carries the denial ordinal so consecutive denials differ
  * textually, and a one-line recovery hint instead of the multi-line block.
  */
-function condensedGateMsg(action, filePath, ordinal, { cls = 'code', targetNote = '', profile = null, missNote = '' } = {}) {
+function condensedGateMsg(action, filePath, ordinal, { cls = 'code', targetNote = '', profile = null, missNote = '', locked = false } = {}) {
   const safe = sanitizePath(filePath);
   const hint = condensedHintFor(cls, action === 'creation', profile, questionOptions());
   return (
     `[Fact-Forcing Gate] (denial #${ordinal} this session) First ${action} of ${safe}: ` +
     `${hint} ` +
-    `${batchSiblingWarning(safe)} ` +
+    `${batchSiblingWarning(safe, locked)} ` +
     (missNote ? `${missNote} ` : '') +
     (targetNote ? `${targetNote} ` : '') +
-    '(Use GATEGUARD_EXEMPT_GLOBS for path-scoped exemptions; GATEGUARD_FACT_FORCE_MAX_DENIALS caps denials per session; ECC_GATEGUARD=off disables this gate.)'
+    (showRecoveryHints()
+      ? '(Use GATEGUARD_EXEMPT_GLOBS for path-scoped exemptions; GATEGUARD_FACT_FORCE_MAX_DENIALS caps denials per session; ECC_GATEGUARD=off disables this gate.)'
+      : '')
   );
 }
 
@@ -2134,7 +2196,7 @@ function denialReason(sensitive, linked, missNote, miss) {
   return missNote ? `near-miss:${miss.reason}` : 'first-touch';
 }
 
-function firstTouchDenial(filePath, { isWrite, denials, cls, sensitive, linked = false, profile, miss, reason }) {
+function firstTouchDenial(filePath, { isWrite, denials, cls, sensitive, linked = false, profile, miss, reason, locked = false }) {
   const targetNote = restrictedTargetNote(sensitive, linked);
   const missNote = targetNote ? '' : closestMissNote(miss);
   recordDecision('deny', reason || denialReason(sensitive, linked, missNote, miss), {
@@ -2146,9 +2208,9 @@ function firstTouchDenial(filePath, { isWrite, denials, cls, sensitive, linked =
   });
   if (denials > getFullDenialBudget()) {
     const action = isWrite ? 'creation' : 'edit';
-    return denyResult(condensedGateMsg(action, filePath, denials, { cls, targetNote, profile, missNote }), { includeRecoveryHint: false });
+    return denyResult(condensedGateMsg(action, filePath, denials, { cls, targetNote, profile, missNote, locked }), { includeRecoveryHint: false });
   }
-  const message = withNoteBeforeRetry(firstTouchGateMsg(filePath, isWrite, cls, profile), missNote);
+  const message = withNoteBeforeRetry(firstTouchGateMsg(filePath, isWrite, cls, profile, locked), missNote);
   return denyResult(targetNote ? withNoteBeforeRetry(message, targetNote) : message, {
     narrowRecoveryHint: EDIT_WRITE_NARROW_RECOVERY_HINT
   });
@@ -2183,6 +2245,7 @@ function routineShellMsg(toolName) {
 }
 
 function withRecoveryHint(message, hookIds = [EDIT_WRITE_HOOK_ID], narrowRecoveryHint = '') {
+  if (!showRecoveryHints()) return message;
   const disableTargets = hookIds.map(hookId => `\`${hookId}\``).join(' or ');
   const recoveryLines = narrowRecoveryHint ? [narrowRecoveryHint, ''] : [];
   return [
@@ -2444,7 +2507,9 @@ function flushMetrics() {
 
 function exemptReason(filePath, data) {
   if (!filePath) return 'no-path';
-  if (isClaudeSettingsPath(filePath)) return 'claude-settings';
+  // .claude/settings*.json holds the switches for GateGuard and the other
+  // hooks, so a first-touch edit there must go through the same gate as any
+  // other new target. Exempting it let an agent disable the guard (#3845).
   return isExemptPath(filePath, data) ? 'exempt-glob' : '';
 }
 
@@ -2520,8 +2585,37 @@ function gateSingleEdit(ctx) {
   const fileKey = canonicalPathKey(filePath, data);
   if (!isChecked([fileKey, filePath])) return firstTouchSingleEdit(ctx, filePath, fileKey);
 
+  const sameBatch = sameBatchDenial(ctx, filePath, fileKey);
+  if (sameBatch) return sameBatch;
+
   recordDecision('pass-checked', 'checked', { target: filePath });
   return rawInput; // allow
+}
+
+// --- Same-batch siblings ---
+// see docs/gateguard/design-notes.md#same-batch-siblings
+
+/**
+ * Message id of the pending call's batch, only when the pending
+ * `tool_use_id` is found in the transcript. No newest-message fallback:
+ * a guessed batch could match the retry and deny it forever.
+ */
+function pendingBatchId(ctx) {
+  const pendingId = turnScan().pendingToolUseId(ctx.data);
+  if (!pendingId) return null;
+  const scan = ctx.getTurnScan();
+  if (!scan || !(scan.batchIds instanceof Map)) return null;
+  const batch = scan.batchIds.get(pendingId);
+  return typeof batch === 'string' && batch ? batch : null;
+}
+
+/** Deny a checked file's edit when it comes from the batch whose first touch was denied. */
+function sameBatchDenial(ctx, filePath, fileKey) {
+  const locks = getBatchLocks(loadState());
+  if (!Object.hasOwn(locks, fileKey)) return null;
+  if (pendingBatchId(ctx) !== locks[fileKey].batch) return null;
+  recordDecision('batch-deny', 'same-batch', { target: filePath, key: fileKey });
+  return denyResult(sameBatchGateMsg(filePath), { includeRecoveryHint: false });
 }
 
 function singleEditProfile(ctx, filePath, cls, restricted) {
@@ -2572,7 +2666,8 @@ function firstTouchSingleEdit(ctx, filePath, fileKey) {
     return { additionalContext: siblingNote(sibling), exitCode: 0 };
   }
   const cap = restricted ? Number.POSITIVE_INFINITY : getMaxDenialBudget();
-  const { ok, denials } = markCheckedAndCountDenial(fileKey, { cls, dirGate, cap });
+  const batchId = pendingBatchId(ctx);
+  const { ok, denials } = markCheckedAndCountDenial(fileKey, { cls, dirGate, batchId, cap });
   if (!ok) {
     return allowWithStateWarning();
   }
@@ -2582,7 +2677,7 @@ function firstTouchSingleEdit(ctx, filePath, fileKey) {
     return rawInput;
   }
   const miss = restricted ? null : findClosestMiss(getTurnScan(), filePath, isNewFile, data);
-  return firstTouchDenial(filePath, { isWrite: toolName === 'Write', denials, cls, sensitive, linked, profile, miss });
+  return firstTouchDenial(filePath, { isWrite: toolName === 'Write', denials, cls, sensitive, linked, profile, miss, locked: batchId !== null });
 }
 
 // --- MultiEdit ---
@@ -2603,6 +2698,8 @@ function gateMultiEdit(ctx) {
     const fileKey = canonicalPathKey(filePath, data);
     if (batch.trivialKeys.has(fileKey)) continue;
     if (isChecked([fileKey, filePath])) {
+      const sameBatch = sameBatchDenial(ctx, filePath, fileKey);
+      if (sameBatch) return sameBatch;
       recordDecision('pass-checked', 'checked', { target: filePath, key: fileKey });
       continue;
     }
@@ -2618,7 +2715,7 @@ function gateMultiEdit(ctx) {
 function gateMultiEditSubagent(edits, data, rawInput) {
   for (const edit of edits) {
     const filePath = (edit && edit.file_path) || '';
-    if (!filePath || isClaudeSettingsPath(filePath) || isExemptPath(filePath, data)) continue;
+    if (!filePath || isExemptPath(filePath, data)) continue;
     const denial = subagentRestrictedDenial(filePath, data, false);
     if (denial) return denial;
   }
@@ -2654,7 +2751,8 @@ function firstTouchMultiEdit(ctx, edits, filePath, fileKey, batch) {
     return null;
   }
   const cap = restricted ? Number.POSITIVE_INFINITY : getMaxDenialBudget();
-  const { ok, denials } = markCheckedAndCountDenial(fileKey, { cls, cap });
+  const batchId = pendingBatchId(ctx);
+  const { ok, denials } = markCheckedAndCountDenial(fileKey, { cls, batchId, cap });
   if (!ok) {
     return allowWithStateWarning();
   }
@@ -2664,7 +2762,7 @@ function firstTouchMultiEdit(ctx, edits, filePath, fileKey, batch) {
     return null;
   }
   const miss = restricted ? null : findClosestMiss(getTurnScan(), filePath, false, data);
-  return firstTouchDenial(filePath, { isWrite: false, denials, cls, sensitive, linked, profile, miss });
+  return firstTouchDenial(filePath, { isWrite: false, denials, cls, sensitive, linked, profile, miss, locked: batchId !== null });
 }
 
 // --- Bash / PowerShell ---

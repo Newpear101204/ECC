@@ -258,6 +258,64 @@ if (process.platform !== 'win32') {
       }
     });
 
+    test('scan rejects truncated observations instead of reporting unavailable usage', () => {
+      const brokenObservations = path.join(tempRoot, 'truncated-observations.jsonl');
+      fs.writeFileSync(brokenObservations, `${JSON.stringify({
+        tool: 'Read', path: path.join(globalSkills, 'active', 'SKILL.md'),
+        timestamp: new Date().toISOString(),
+      })}\n{"tool":`);
+      const result = runBash(scanScript, [], { ...env, SKILL_STOCKTAKE_OBSERVATIONS: brokenObservations });
+      assert.notStrictEqual(result.status, 0, 'A partial observation log must fail visibly');
+      assert.strictEqual(result.stdout, '', 'A failed scan must not publish incomplete inventory');
+      assert.match(result.stderr, /observation|parse error/i);
+    });
+
+    test('scan counts literal backslashes in skill paths without interpreting escape sequences', () => {
+      const skillsDir = path.join(tempRoot, 'backslash-skills');
+      const skillDir = path.join(skillsDir, String.raw`literal\tname\nending`);
+      writeSkill(skillDir, 'backslash-skill');
+      const skillPath = path.join(skillDir, 'SKILL.md');
+      const observationsPath = path.join(tempRoot, 'backslash-observations.jsonl');
+      const observations = [0, 1, 10, 40].map(days => ({
+        tool: 'Read',
+        path: skillPath,
+        timestamp: new Date(Date.now() - days * 86400000).toISOString(),
+      }));
+      fs.writeFileSync(observationsPath, `${observations.map(record => JSON.stringify(record)).join('\n')}\n`);
+      const result = runBash(scanScript, [], {
+        SKILL_STOCKTAKE_GLOBAL_DIR: path.join(tempRoot, 'missing-global'),
+        SKILL_STOCKTAKE_PROJECT_DIR: skillsDir,
+        SKILL_STOCKTAKE_OBSERVATIONS: observationsPath,
+      });
+      assert.strictEqual(result.status, 0, result.stderr);
+      const skills = JSON.parse(result.stdout).skills;
+      assert.strictEqual(skills.length, 1);
+      assert.strictEqual(skills[0].path, skillPath);
+      assert.strictEqual(skills[0].use_7d, 2);
+      assert.strictEqual(skills[0].use_30d, 3);
+    });
+
+    test('scan does not count a newline-delimited path fragment as an observed skill', () => {
+      const skillPath = path.join(globalSkills, 'active', 'SKILL.md');
+      // This is one real file outside the inventory. Its newline is immediately
+      // followed by the complete path of a different, unobserved tracked skill.
+      const unrelatedPath = `${tempRoot}/unrelated\n${skillPath}`;
+      fs.mkdirSync(path.dirname(unrelatedPath), { recursive: true });
+      fs.writeFileSync(unrelatedPath, '# unrelated file\n');
+      const observationsPath = path.join(tempRoot, 'newline-fragment-observations.jsonl');
+      fs.writeFileSync(observationsPath, `${JSON.stringify({
+        tool: 'Read', path: unrelatedPath, timestamp: new Date().toISOString(),
+      })}\n`);
+      assert.notStrictEqual(unrelatedPath, skillPath);
+      assert.ok(fs.statSync(unrelatedPath).isFile());
+      const result = runBash(scanScript, [], { ...env, SKILL_STOCKTAKE_OBSERVATIONS: observationsPath });
+      assert.strictEqual(result.status, 0, result.stderr);
+      const skill = JSON.parse(result.stdout).skills.find(entry => entry.path === skillPath);
+      assert.ok(skill, 'the unobserved skill must remain in the inventory');
+      assert.strictEqual(skill.use_7d, 0);
+      assert.strictEqual(skill.use_30d, 0);
+    });
+
     test('scan preserves exact usage counts and date windows for normal and whitespace paths', () => {
       const observationsPath = path.join(tempRoot, 'matching-observations.jsonl');
       const observedPaths = [path.join(linkedSkill, 'SKILL.md'),
@@ -288,6 +346,40 @@ if (process.platform !== 'win32') {
     });
   } catch (error) {
     console.log(`  ✗ inventory fixture setup: ${error.message}`);
+    failed++;
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+if (process.platform !== 'win32') {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-stocktake-order-'));
+  try {
+    const projectSkills = path.join(tempRoot, 'project', '.claude', 'skills');
+    const names = Array.from({ length: 12 }, (_, index) => `skill-${String.fromCharCode(97 + index)}`);
+    for (const name of names) writeSkill(path.join(projectSkills, name), name);
+    const expectedPaths = names.map(name => path.join(projectSkills, name, 'SKILL.md'));
+    const resultsPath = path.join(tempRoot, 'results.json');
+    fs.writeFileSync(resultsPath, JSON.stringify({ evaluated_at: '2099-01-01T00:00:00Z', skills: [] }));
+    const env = {
+      SKILL_STOCKTAKE_GLOBAL_DIR: path.join(tempRoot, 'missing-global'),
+      SKILL_STOCKTAKE_PROJECT_DIR: projectSkills,
+      SKILL_STOCKTAKE_OBSERVATIONS: path.join(tempRoot, 'missing-observations.jsonl'),
+    };
+
+    test('scan keeps sorted discovery order past nine skills', () => {
+      const result = runBash(scanScript, [], env);
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.deepStrictEqual(JSON.parse(result.stdout).skills.map(skill => skill.path), expectedPaths);
+    });
+
+    test('quick diff keeps sorted discovery order past nine skills', () => {
+      const result = runBash(quickDiffScript, [resultsPath], env);
+      assert.strictEqual(result.status, 0, result.stderr);
+      assert.deepStrictEqual(JSON.parse(result.stdout).map(skill => skill.path), expectedPaths);
+    });
+  } catch (error) {
+    console.log(`  ✗ ordering fixture setup: ${error.message}`);
     failed++;
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -351,6 +443,45 @@ if (process.platform !== 'win32') {
       }
     });
   }
+}
+
+if (process.platform !== 'win32') {
+  test('quick diff uses each saved evaluation mtime across cache shapes and timestamp changes', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-stocktake-quick-mtime-'));
+    try {
+      const skills = path.join(tempRoot, '.claude', 'skills');
+      writeSkill(path.join(skills, 'live'), 'live');
+      const skillPath = path.join(skills, 'live', 'SKILL.md');
+      const resultsPath = path.join(tempRoot, 'results.json');
+      const env = {
+        SKILL_STOCKTAKE_GLOBAL_DIR: path.join(tempRoot, 'missing'),
+        SKILL_STOCKTAKE_PROJECT_DIR: skills,
+      };
+      const evaluatedAt = '2025-01-10T00:00:00Z';
+      for (const shape of ['array', 'path-keyed', 'name-keyed']) {
+        for (const scenario of [
+          { name: 'changed during batch', saved: '2025-01-01T00:00:00Z', live: '2025-01-02T00:00:00Z', changed: true },
+          { name: 'restored older timestamp', saved: '2025-01-02T00:00:00Z', live: '2025-01-01T00:00:00Z', changed: true },
+          { name: 'matching future timestamp', saved: '2025-02-01T00:00:00Z', live: '2025-02-01T00:00:00Z', changed: false },
+          { name: 'null mtime unchanged', saved: null, live: '2025-01-01T00:00:00Z', changed: false },
+          { name: 'null mtime changed', saved: null, live: '2025-02-01T00:00:00Z', changed: true },
+          { name: 'legacy unchanged', live: '2025-01-01T00:00:00Z', changed: false },
+          { name: 'legacy changed', live: '2025-02-01T00:00:00Z', changed: true },
+        ]) {
+          const entry = { path: skillPath, ...(Object.hasOwn(scenario, 'saved') ? { mtime: scenario.saved } : {}) };
+          const cache = shape === 'array' ? [entry] : { [shape === 'path-keyed' ? skillPath : 'live']: entry };
+          fs.writeFileSync(resultsPath, JSON.stringify({ evaluated_at: evaluatedAt, skills: cache }));
+          fs.utimesSync(skillPath, new Date(scenario.live), new Date(scenario.live));
+          const result = runBash(quickDiffScript, [resultsPath], env);
+          assert.strictEqual(result.status, 0, result.stderr);
+          assert.deepStrictEqual(JSON.parse(result.stdout), scenario.changed
+            ? [{ path: skillPath, mtime: scenario.live, is_new: false }] : [], `${shape}: ${scenario.name}`);
+        }
+      }
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 }
 
 console.log(`\nPassed: ${passed}`);
