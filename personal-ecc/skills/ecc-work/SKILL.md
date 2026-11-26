@@ -68,6 +68,11 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
    self-contained requirements, decisions, status, portable paths and resume rules.
    Put needed BA/design/contract contents in the file, not only source links.
    For meaningful planning, follow `personal-ecc/skills/ecc-plan/SKILL.md`.
+   Apply `personal-ecc/references/work-quality-contract.md` from the shared ECC
+   root: before work, map each material criterion to an expected artifact/behavior,
+   discriminating check, expected result, authority and evidence gap. Use the same
+   feature Markdown, not another report. Plan-only defines future checks without
+   executing them; tiny tasks keep this brief.
    Before changing a feature, follow its Existing-Flow Impact procedure: trace
    shared code/contracts to existing callers and consumers, identify preserved
    versus explicitly changed behavior, and plan evidence-backed regression checks.
@@ -97,6 +102,12 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
    internal PowerShell command. Managed handoffs isolate every task in a worktree;
    verify packet/baseline/ownership before assigning an actual agent. Native tool
    availability alone is not a process adapter or a sandbox.
+   Include expected outputs/checks, input versions and recovery/stop conditions
+   in each assignment. Normalize submissions to status/summary/artifacts/next_actions
+   without changing host tool schemas or replacing the managed submission contract.
+   For failure/timeout, inspect what actually changed before an authorized retry;
+   preserve attempt evidence and stop unproductive loops. Ask only about unresolved
+   business intent or missing authority, not ordinary engineering choices.
 6. Review submissions against acceptance criteria and actual evidence, bound to
    task/attempt/revision/output hash. Respect accepted versus integrated gates.
    Missing checks stay not-run. Never manufacture approval or worker identities.
@@ -104,6 +115,12 @@ decision as technical or use technical autonomy to bypass DB/execution limits.
    reviewers. Compare the actual diff with the impact assessment; newly touched
    shared paths require updated consumer analysis and applicable regression checks.
    Report checks not run and unknown consumers instead of promising no regressions.
+   Before delivery of the authorized stage, apply the shared contract's final
+   self-evaluation. Main AI checks accuracy/completeness/clarity/actionability/
+   conciseness on substantive work; tiny changes get a brief evidence/gap check.
+   Fix in-scope gaps and refresh affected checks/review when output changes. Record
+   concrete gaps/limitations in the same Markdown. Do not substitute a score,
+   average, done status or heuristic evaluator for real acceptance evidence.
 7. Report the chosen mode and material milestones briefly. Retain the absolute
    managed execution run path in task context/handoff when one is used.
    Update the canonical feature file at meaningful milestones and before stop or

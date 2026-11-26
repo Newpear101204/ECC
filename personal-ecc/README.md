@@ -194,6 +194,14 @@ and the same file across sessions. See the [portable feature file contract](refe
 The file transfers task context, not uncommitted code or native-agent sessions.
 No additional JSON run, dashboard, agents or publication permission follows from it.
 
+ecc-work also adapts agent-harness-construction and agent-self-evaluation through
+the [work quality contract](references/work-quality-contract.md). Define completion
+evidence and safe result/recovery contracts before work; main AI then checks the
+delivered output for concrete gaps before handoff. Substantive work covers five
+axes; tiny work stays brief. Keep evidence and limitations in the same feature
+Markdown. Scores never satisfy review/test gates, and this does not enable ECC's
+DB-backed work-items flow, evaluator scripts, hooks or a background scheduler.
+
 Vietnamese operator documents: [implementation report](ORCHESTRATION-REPORT.vi.md)
 and [new-feature walkthrough](FEATURE-WORKFLOW-GUIDE.vi.md). The walkthrough starts
 with short user actions; PowerShell commands are an optional technical appendix

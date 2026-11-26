@@ -52,6 +52,12 @@ provenance, not a substitute for the necessary contents. Capture:
 - Actual validation/review results tied to the checked revision, commands/targets,
   expected versus observed outcomes, unrun checks and remaining limitations. Summarize
   essential results in Markdown; an inaccessible local log link alone is insufficient.
+- Criterion-to-evidence mapping before execution, expected output/result and action
+  authority; material error/retry/stop conditions and actual recovery outcomes.
+  Before delivery include the main AI's right-sized final quality check, concrete
+  gaps/corrections and remaining limitations following
+  [the quality contract](work-quality-contract.md). Self-ratings are not actual
+  tests, reviewer approval or gate evidence; do not create a separate score report.
 - Current stage, granted actions and restrictions (DB/browser/app/tests/Git/deploy),
   decision evidence and any permission uncertainty. A document is task context,
   not authority to override current host/project/user instructions.
@@ -120,7 +126,8 @@ Updated: <date/time>; Stage: <actual stage>; Canonical file: <relative path>
 ## Tasks and Actual Progress
 <Dependencies, owners/attempts if relevant, status, outputs and remaining work>
 ## Validation and Review
-<Actual commands/revisions/results, unrun checks, findings and limitations>
+<Criteria/check/expected result/authority mapping; actual commands/revisions/results,
+unrun checks, review/recovery findings and right-sized final quality check>
 ## Repository, Transfer and Resume
 <Repo/branch/commit, relevant pending diff/files/assets/run state and availability>
 <Exact next safe steps, required environment and checks before resuming>

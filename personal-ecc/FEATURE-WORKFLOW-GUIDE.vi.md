@@ -305,6 +305,23 @@ chí giữ luồng cũ cho worker/reviewer. Test chưa chạy phải ghi chưa c
 Việc nhỏ chỉ cần kiểm tra phạm vi hẹp và ghi vào file tính năng; không bắt onboarding
 toàn repo, thêm báo cáo impact riêng hay bật dashboard. Không cần gọi thêm skill.
 
+### Bước 2.2: Chốt bằng chứng hoàn thành và cách xử lý lỗi
+
+ecc-work tích hợp nguyên tắc của agent-harness-construction: trước khi làm/giao
+việc, AI xác định tiêu chí nào được chứng minh bằng artifact hoặc hành vi nào,
+kiểm tra ra sao, kết quả mong đợi là gì, đã có quyền chạy chưa và còn thiếu gì.
+Plan-only chỉ ghi cách kiểm tra dự kiến, không tự chạy app/test để hoàn thành plan.
+
+Worker nhận đầu vào/phiên bản, phạm vi, đầu ra, kiểm tra và điều kiện dừng rõ ràng.
+Kết quả trả có trạng thái, tóm tắt, artifact thật và bước tiếp theo; “done” hay exit 0
+không thay bằng chứng acceptance. Đây là tóm tắt bàn giao, không sửa schema tool.
+
+Khi lỗi, AI ghi bằng chứng/nguyên nhân hoặc giả thuyết còn mở, tác động có thể đã
+xảy ra, bước kiểm tra tiếp và điều kiện dừng. Timeout/gián đoạn không đồng nghĩa
+chưa có tác động: kiểm tra trước khi retry. Không chạy vòng lặp sửa lỗi vô hạn,
+không replay tác động chưa chắc chắn hay dùng retry để vượt quyền. Mâu thuẫn nghiệp
+vụ hỏi bạn; quyết định kỹ thuật trong phạm vi vẫn do AI chính xử lý.
+
 ### Bước 3: Chốt contract trước khi cho code song song
 
 Backend/frontend chỉ song song khi đã rõ request, response, lỗi, quyền và cách
@@ -792,6 +809,29 @@ Trước khi chạy, kiểm tra target/side effect của command; chỉ chạy n
 cấp quyền và bảo đảm không truy cập DB. Báo PASS/FAIL/NOT RUN kèm evidence,
 revision, command, phạm vi và hạn chế. Không tự commit/push/deploy.
 ```
+
+### 10.2.1. AI chính tự kiểm tra đầu ra trước bàn giao
+
+ecc-work tích hợp agent-self-evaluation theo mức độ công việc. Việc nhỏ chỉ cần
+kiểm tra evidence/phần thiếu ngắn trong file tính năng, không thêm agent hay bảng
+điểm dài. Công việc đáng kể được xét đủ năm trục:
+
+| Trục | Điều AI phải đối chiếu |
+|---|---|
+| Chính xác | Khẳng định có bằng chứng đúng revision; phân biệt đọc code, test đã chạy và kết quả bạn cung cấp |
+| Đầy đủ | Đủ phạm vi/tiêu chí, nhánh lỗi và ảnh hưởng luồng cũ; phần chưa xác minh được nêu rõ |
+| Rõ ràng | Người tiếp nhận hiểu thay đổi, quyết định còn mở và giới hạn |
+| Có thể tiếp tục | Markdown và source đúng phiên bản đủ để thực hiện bước tiếp theo |
+| Gọn | Không lặp báo cáo/log hoặc tạo điều phối thừa, nhưng vẫn đủ ngữ cảnh bàn giao |
+
+Phát hiện thiếu sót có căn cứ thì AI sửa trong phạm vi đã giao. Output thay đổi
+phải kiểm tra/review lại phần liên quan. Thiếu quyền hoặc nghiệp vụ chưa rõ vẫn
+phải ghi blocker/hỏi bạn, không tự mở rộng việc để nâng điểm. Không tạo lỗi giả
+để tránh tự chấm cao, cũng không dùng điểm trung bình để tự duyệt task.
+
+Kết luận nằm trong file tính năng đang có. Chấm số chỉ khi được yêu cầu hoặc hữu
+ích, không bắt buộc mỗi task/worker. Đây không thay test/reviewer/gate độc lập và
+không bật Stop hook, dashboard, DB work-items, script heuristic hay bộ chạy nền.
 
 ### 10.3. Commit, push và deploy beta là các hành động riêng
 

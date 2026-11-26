@@ -150,6 +150,16 @@ agents. Honor explicit "no agents", "plan only", and concurrency preferences.
 
 ### Reassess Execution Per Phase
 
+For ecc-work/ecc-plan, apply
+`personal-ecc/references/work-quality-contract.md`: map criteria to completion
+evidence before work, use narrow assignment/result/recovery contracts, then main-AI
+self-evaluation before delivery. Substantial work considers five axes; tiny tasks
+use a brief evidence/gap check. Keep results in the existing feature Markdown.
+Self-ratings never replace tests/review or advance acceptance/integration gates.
+This is a personal adaptation of agent-harness-construction and agent-self-evaluation,
+not permission to use upstream DB work-items, evaluator scripts, hooks or background
+repair loops. Preserve plan-only, bug-stage and all action limits.
+
 Separate lifecycle dependencies from execution inside a phase. An AI-selected
 sequential approach to discovery/planning does not select sequential coding or
 review for the whole task. Reassess when entering discovery, planning, plan review,

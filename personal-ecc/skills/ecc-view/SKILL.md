@@ -29,6 +29,9 @@ work, dependencies/blockers, results/checks/review and next eligible action. Sho
 only relevant rows unless more detail is requested. Attribute check evidence;
 do not invent percentages or equate a claimed/prepared status with a live agent.
 An inline table is a snapshot and does not update after the response.
+Show recorded criterion/check gaps and the final quality-check limitations when
+relevant. Do not run a new evaluation solely to show progress or treat a self-score
+as test evidence, acceptance, integration or permission to transition a task.
 
 ## Dashboard Deferred
 

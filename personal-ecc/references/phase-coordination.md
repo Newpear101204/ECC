@@ -32,6 +32,10 @@ current verified independent streams and actual prerequisites.
 | Verification | Independent checks on known revisions/resources | Prerequisites, result consolidation and required final integrated checks |
 
 These are possibilities, not mandatory extra reviews or agents for every task.
+Use [the quality contract](work-quality-contract.md) to establish completion
+evidence before each assignment and safe retry/stop conditions. Evaluate only the
+current authorized stage before delivery; final self-evaluation is reflective,
+not another mandatory reviewer agent, numeric gate or permission to start checks.
 Do not automatically start formal bug review, tests, app execution or publication
 outside the user's established authority. Independent parallel review does not
 replace final analysis of interactions across integrated changes. If a reviewer
@@ -79,6 +83,10 @@ ledger are deferred; do not initialize either for reporting. For example:
 When work starts, replace the proposal with actual dispatch references and current
 attempt/output evidence. A main-AI task is real work too; it should not disappear
 from the ledger simply because it has no subagent. Do not manufacture activity.
+Summarize results with actual status, summary, artifacts and next actions while
+keeping the real managed schema/gates. On failure or uncertain effects reconcile
+evidence before retry; a new revision needs applicable checks/review, not an old
+score. Keep this in the existing Markdown/required execution state.
 
 Distinguish these facts in reporting:
 

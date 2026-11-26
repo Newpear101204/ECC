@@ -70,12 +70,20 @@ workspace file can be found. Never claim to have read an unavailable file.
    tests for code changes; when TDD is required, plan a failing test before
    implementation. Use verified repository commands or label commands that need
    confirmation. Planned validation is not evidence that tests have run.
+   Apply `personal-ecc/references/work-quality-contract.md`: map material criteria
+   to expected artifacts/behaviors, checks and expected outcomes, action authority
+   and evidence gaps before implementation. Add recovery/escalation/stop conditions
+   for consequential failure paths; do not invent a general validator from ECC's
+   DB-backed adapter-doc example. Tiny plans may express this in a short paragraph.
 6. Present enough detail to begin work, proportional to task size. If approval is
    still required before implementation, state that the next step is approval or
    revision and stop at the plan artifact.
    Save/update the feature Markdown and report its path even for small features.
    Capture known requirements and explicit gaps at intake; do not wait for code
    approval or a complete BA before creating the initial factual task record.
+   Evaluate the plan as the currently authorized deliverable using the shared
+   contract's right-sized final check; do not execute future checks, start coding
+   or cross a user stopping boundary merely to improve a self-rating.
 
 ## Existing-Flow Impact
 
@@ -268,7 +276,12 @@ preservation or approved-change criterion, regression check and evidence gaps}
 reason, main-AI owner or proposed worker; reassess at execution, not a live assignment}
 
 ## Validation
-{Check commands and expected results}
+{Criterion -> artifact/behavior -> check and expected result -> authority ->
+actual evidence or not-run/gap; important failure recovery and stop conditions}
+
+## Final Quality Check (for the delivered stage)
+{Brief evidence/gap check for tiny work; five axes for substantive output.
+Concrete corrections/limitations; self-ratings are not acceptance or test evidence.}
 
 ## Risks and Open Questions
 {Concrete risks, mitigations, questions affecting implementation}
